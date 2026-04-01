@@ -2,16 +2,19 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 const express = require('express');
 
-// 🌐 KEEP-ALIVE SERVER (for Railway)
+// 🌐 KEEP-ALIVE SERVER (Railway fix)
 const app = express();
+
 app.get("/", (req, res) => {
   res.send("Verkadala bot is alive 🌰");
 });
-app.listen(3000, () => {
-  console.log("Web server running...");
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Web server running on port ${PORT}...`);
 });
 
-// 🤖 DISCORD BOT SETUP
+// 🤖 DISCORD BOT
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -33,7 +36,7 @@ function saveData() {
   fs.writeFileSync(FILE, JSON.stringify(afkUsers, null, 2));
 }
 
-// Time format
+// Time formatter
 function formatTime(ms) {
   const sec = Math.floor(ms / 1000);
   const min = Math.floor(sec / 60);
@@ -56,7 +59,7 @@ client.on('messageCreate', message => {
   const userId = message.author.id;
   const content = message.content.toLowerCase();
 
-  // 🟢 REMOVE AFK when user returns
+  // 🟢 REMOVE AFK
   if (afkUsers[userId]) {
     const time = Date.now() - afkUsers[userId].time;
     const duration = formatTime(time);
@@ -99,7 +102,7 @@ client.on('messageCreate', message => {
   });
 });
 
-// 🛡️ CRASH PROTECTION
+// 🛡️ ERROR HANDLING
 process.on("uncaughtException", console.error);
 process.on("unhandledRejection", console.error);
 
