@@ -109,7 +109,7 @@ client.on('messageCreate', async message => {
 
     try {
       const res = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
           contents: [
             {
@@ -124,10 +124,14 @@ client.on('messageCreate', async message => {
       );
 
       const reply =
-        res.data.candidates?.[0]?.content?.parts?.[0]?.text ||
-        "response illa";
+        res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!reply) {
+        return message.reply("response illa");
+      }
 
       message.reply(reply);
+
     } catch (err) {
       console.error("AI ERROR:", err.response?.data || err.message);
       message.reply("edho problem iruku, apram try pannu");
