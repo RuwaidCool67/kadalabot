@@ -26,6 +26,7 @@ const client = new Client({
 
 const FILE = './afk.json';
 let afkUsers = {};
+
 if (fs.existsSync(FILE)) {
   afkUsers = JSON.parse(fs.readFileSync(FILE));
 }
