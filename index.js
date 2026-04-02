@@ -1,11 +1,14 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 const axios = require('axios');
+const fs = require('fs');
 
+// KEEP ALIVE
 const app = express();
 app.get("/", (req, res) => res.send("Bot alive"));
 app.listen(process.env.PORT || 3000);
 
+// DISCORD
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -16,6 +19,27 @@ const client = new Client({
 
 const cooldown = new Map();
 
+// AFK STORAGE
+const FILE = './afk.json';
+let afkUsers = {};
+if (fs.existsSync(FILE)) {
+  afkUsers = JSON.parse(fs.readFileSync(FILE));
+}
+
+function saveAFK() {
+  fs.writeFileSync(FILE, JSON.stringify(afkUsers, null, 2));
+}
+
+function formatTime(ms) {
+  const sec = Math.floor(ms / 1000);
+  const min = Math.floor(sec / 60);
+  const hr = Math.floor(min / 60);
+  if (hr > 0) return `${hr}h ${min % 60}m`;
+  if (min > 0) return `${min}m`;
+  return `${sec}s`;
+}
+
+// MODELS
 const MODELS = [
   "meta-llama/llama-3-8b-instruct",
   "google/gemma-7b-it"
@@ -27,14 +51,42 @@ client.once('clientReady', () => {
 
 client.on('messageCreate', async (message) => {
   try {
-    // 🔥 HARD FILTER (fix double reply)
     if (message.author.bot) return;
     if (!message.content) return;
-    if (!message.content.toLowerCase().startsWith("kadala ai")) return;
 
+    const content = message.content.toLowerCase();
     const userId = message.author.id;
 
-    // cooldown
+    // ================= AFK REMOVE =================
+    if (afkUsers[userId]) {
+      const time = Date.now() - afkUsers[userId].time;
+      const duration = formatTime(time);
+
+      delete afkUsers[userId];
+      saveAFK();
+
+      await message.reply(
+        `${message.author.username} ${duration} neram AFK la irundhaan, welcome back`
+      );
+    }
+
+    // ================= AFK SET =================
+    if (content.startsWith("kadala afk")) {
+      const reason = message.content.slice(11).trim() || "reason illa";
+
+      afkUsers[userId] = {
+        reason,
+        time: Date.now()
+      };
+
+      saveAFK();
+
+      return message.reply(`seri, ippo AFK la iruken\nReason: ${reason}`);
+    }
+
+    // ================= AI =================
+    if (!content.startsWith("kadala ai")) return;
+
     const now = Date.now();
     const last = cooldown.get(userId) || 0;
 
@@ -47,7 +99,6 @@ client.on('messageCreate', async (message) => {
     const prompt = message.content.slice(10).trim();
     if (!prompt) return message.reply("enna kekka pora sollu");
 
-    // send once
     const tempMsg = await message.reply("oru nimisham...");
 
     let finalReply = null;
@@ -66,7 +117,7 @@ You are Verkadala, a Tamil Discord bot.
 
 STRICT RULES:
 - ONLY Tamil slang (Tanglish)
-- NO English sentences
+- No full English replies
 - Natural Chennai style
 - Funny + slight attitude
 - No cringe or broken words
@@ -112,7 +163,6 @@ User: ${prompt}
       }
     }
 
-    // 🔥 SINGLE EDIT ONLY (no double reply)
     if (!finalReply) {
       await tempMsg.edit("edho problem iruku, apram try pannu");
     } else {
