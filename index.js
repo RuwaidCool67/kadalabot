@@ -1,13 +1,14 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 const axios = require('axios');
+const fs = require('fs');
 
 // KEEP ALIVE
 const app = express();
 app.get("/", (req, res) => res.send("Bot alive"));
 app.listen(process.env.PORT || 3000);
 
-// DISCORD BOT
+// DISCORD
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -17,6 +18,32 @@ const client = new Client({
 });
 
 const cooldown = new Map();
+
+// AFK SYSTEM
+const FILE = './afk.json';
+let afkUsers = {};
+
+if (fs.existsSync(FILE)) {
+  afkUsers = JSON.parse(fs.readFileSync(FILE));
+}
+
+function saveAFK() {
+  fs.writeFileSync(FILE, JSON.stringify(afkUsers, null, 2));
+}
+
+function formatTime(ms) {
+  const sec = Math.floor(ms / 1000);
+  const min = Math.floor(sec / 60);
+  const hr = Math.floor(min / 60);
+  if (hr > 0) return `${hr}h ${min % 60}m`;
+  if (min > 0) return `${min}m`;
+  return `${sec}s`;
+}
+
+// 🔥 LANGUAGE DETECT
+function isTamil(text) {
+  return /[\u0B80-\u0BFF]/.test(text);
+}
 
 // 🔥 MODELS (fallback)
 const MODELS = [
@@ -36,8 +63,43 @@ client.on('messageCreate', async (message) => {
     const content = message.content.toLowerCase();
     const userId = message.author.id;
 
-    // 🔥 detect reply to bot
+    // ================= AFK REMOVE =================
+    if (afkUsers[userId]) {
+      const time = Date.now() - afkUsers[userId].time;
+      const duration = formatTime(time);
+
+      delete afkUsers[userId];
+      saveAFK();
+
+      await message.reply(`${message.author.username} back ah 😏 ${duration} AFK la irundha`);
+    }
+
+    // ================= AFK SET =================
+    if (content.startsWith("kadala afk")) {
+      const reason = message.content.slice(11).trim() || "reason illa";
+
+      afkUsers[userId] = {
+        reason,
+        time: Date.now()
+      };
+
+      saveAFK();
+      return message.reply(`seri da AFK 😴\nReason: ${reason}`);
+    }
+
+    // ================= AFK MENTION =================
+    message.mentions.users.forEach(user => {
+      if (afkUsers[user.id]) {
+        const data = afkUsers[user.id];
+        const duration = formatTime(Date.now() - data.time);
+
+        message.reply(`${user.username} AFK da 😴 ${duration}\nReason: ${data.reason}`);
+      }
+    });
+
+    // ================= REPLY DETECT =================
     let isReplyToBot = false;
+
     if (message.reference) {
       try {
         const replied = await message.channel.messages.fetch(message.reference.messageId);
@@ -47,7 +109,7 @@ client.on('messageCreate', async (message) => {
       } catch {}
     }
 
-    // 🔥 trigger
+    // ================= AI TRIGGER =================
     if (!content.startsWith("kadala ai") && !isReplyToBot) return;
 
     // cooldown
@@ -55,7 +117,7 @@ client.on('messageCreate', async (message) => {
     const last = cooldown.get(userId) || 0;
 
     if (now - last < 2000) {
-      return message.reply("dei slow ah po da 😭");
+      return message.reply("dei chill bro 😭 spam pannadha");
     }
 
     cooldown.set(userId, now);
@@ -70,6 +132,9 @@ client.on('messageCreate', async (message) => {
 
     let finalReply = null;
 
+    const tamil = isTamil(prompt);
+    const langHint = tamil ? "User is speaking Tamil" : "User is speaking English";
+
     for (const model of MODELS) {
       try {
         const res = await axios.post(
@@ -80,41 +145,27 @@ client.on('messageCreate', async (message) => {
               {
                 role: "user",
                 content: `
-You are Verkadala, a chaotic Tamil Discord bot.
+You are Verkadala, chaotic Gen Z bot.
 
-STRICT RULES:
-- ONLY Tanglish (Tamil + English mix)
-- VERY SHORT replies (1–2 lines max)
-- NO explanations
-- NO paragraphs
-- NO translations
-- NO formal Tamil
-- Be unhinged, funny, slightly savage but not offensive
-- Talk like a Gen Z Chennai guy
+${langHint}
 
-STYLE:
-- Use words: dei, da, bro, macha, loosu, ayyo
-- Add reactions: 😂 😭 💀
-- Punchy replies only
-- Meme style
+RULES:
+- VERY SHORT (1–2 lines)
+- No explanation
+- No formal tone
+- Meme style replies
 
-Examples:
-User: hi
-Reply: dei ippo dhaan nyabagam vandhudha 💀
+IF TAMIL:
+- Tanglish only
+- Use: dei, da, bro, macha, loosu
+- Example: sapten da 😂 nee enna starving ah
 
-User: saptiya
-Reply: sapten da, nee enna starving ah 😂
+IF ENGLISH:
+- Gen Z slang
+- Use: bro, nah, fr, ain't no way 💀
+- Example: bro just spawned 💀 what’s up
 
-User: dei
-Reply: dei nu koopdura level ah? over ah pogadhe da 😭
-
-User: what is 2+2
-Reply: 4 da loosu 😭 idhukku kooda doubt ah
-
-User: do u goon to clankers
-Reply: dei enna da kelvi idhu 💀 brain ah use pannu bro 😂
-
-Now reply like this ONLY.
+Be funny, chaotic, slightly savage.
 
 User: ${prompt}
 `
@@ -129,8 +180,7 @@ User: ${prompt}
               "Content-Type": "application/json",
               "HTTP-Referer": "https://kadalabot.onrender.com",
               "X-Title": "Verkadala Bot"
-            },
-            timeout: 10000
+            }
           }
         );
 
@@ -141,13 +191,13 @@ User: ${prompt}
           break;
         }
 
-      } catch (err) {
-        console.log("Model failed:", model);
+      } catch {
+        console.log("model failed:", model);
       }
     }
 
     if (!finalReply) {
-      await tempMsg.edit("edho glitch da 😭 apram try pannu");
+      await tempMsg.edit("edho glitch da 😭 try later");
     } else {
       await tempMsg.edit(finalReply);
     }
