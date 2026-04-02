@@ -3,17 +3,14 @@ const fs = require('fs');
 const express = require('express');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// INIT GEMINI (AI STUDIO KEY REQUIRED)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// KEEP ALIVE (Render)
+// KEEP ALIVE
 const app = express();
-app.get("/", (req, res) => res.send("Verkadala bot is alive"));
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Web server running...");
-});
+app.get("/", (req, res) => res.send("Bot alive"));
+app.listen(process.env.PORT || 3000);
 
-// DISCORD BOT
+// DISCORD
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -22,75 +19,20 @@ const client = new Client({
   ]
 });
 
-const FILE = './afk.json';
-let afkUsers = {};
-
-if (fs.existsSync(FILE)) {
-  afkUsers = JSON.parse(fs.readFileSync(FILE));
-}
-
-// SAVE AFK
-function saveData() {
-  fs.writeFileSync(FILE, JSON.stringify(afkUsers, null, 2));
-}
-
-// TIME FORMAT
-function formatTime(ms) {
-  const sec = Math.floor(ms / 1000);
-  const min = Math.floor(sec / 60);
-  const hr = Math.floor(min / 60);
-
-  if (hr > 0) return `${hr}h ${min % 60}m`;
-  if (min > 0) return `${min}m`;
-  return `${sec}s`;
-}
-
-// COOLDOWN
 const cooldown = new Map();
 
-// READY
 client.on('clientReady', () => {
   console.log("Verkadala is running");
 });
 
-// MAIN
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  const userId = message.author.id;
   const content = message.content.toLowerCase();
+  const userId = message.author.id;
 
-  // REMOVE AFK
-  if (afkUsers[userId]) {
-    const time = Date.now() - afkUsers[userId].time;
-    const duration = formatTime(time);
-
-    delete afkUsers[userId];
-    saveData();
-
-    message.reply(
-      `${message.author.username} ${duration} neram AFK la irundhaan, welcome back`
-    );
-  }
-
-  // SET AFK
-  if (content.startsWith("kadala afk")) {
-    const reason = message.content.slice(11).trim() || "reason illa";
-
-    afkUsers[userId] = {
-      reason: reason,
-      time: Date.now()
-    };
-
-    saveData();
-
-    return message.reply(
-      `seri, ippo AFK la iruken\nReason: ${reason}`
-    );
-  }
-
-  // AI COMMAND
   if (content.startsWith("kadala ai")) {
+
     const now = Date.now();
     const last = cooldown.get(userId) || 0;
 
@@ -108,44 +50,22 @@ client.on('messageCreate', async (message) => {
 
     try {
       const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash-latest"
+        model: "gemini-1.5-flash-001"
       });
 
       const result = await model.generateContent(
-        `You are Verkadala, a Tamil Discord bot. Reply in casual Tamil slang (Tanglish), short and natural.\nUser: ${prompt}`
+        `You are Verkadala, Tamil Discord bot. Reply in casual Tamil slang.\nUser: ${prompt}`
       );
 
       const reply = result.response.text();
 
-      if (!reply) {
-        return message.reply("response illa");
-      }
-
-      message.reply(reply);
+      message.reply(reply || "response illa");
 
     } catch (err) {
       console.error("AI ERROR:", err);
       message.reply("edho problem iruku, apram try pannu");
     }
   }
-
-  // AFK MENTION CHECK
-  message.mentions.users.forEach(user => {
-    if (afkUsers[user.id]) {
-      const data = afkUsers[user.id];
-      const time = Date.now() - data.time;
-      const duration = formatTime(time);
-
-      message.reply(
-        `${user.username} AFK la iruken ${duration}\nReason: ${data.reason}`
-      );
-    }
-  });
 });
 
-// ERROR HANDLING
-process.on("uncaughtException", console.error);
-process.on("unhandledRejection", console.error);
-
-// LOGIN
 client.login(process.env.TOKEN);
