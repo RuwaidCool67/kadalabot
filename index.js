@@ -2,12 +2,10 @@ const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 const axios = require('axios');
 
-// KEEP ALIVE (Render)
+// KEEP ALIVE
 const app = express();
 app.get("/", (req, res) => res.send("Bot alive"));
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Web server running...");
-});
+app.listen(process.env.PORT || 3000);
 
 // DISCORD BOT
 const client = new Client({
@@ -20,11 +18,19 @@ const client = new Client({
 
 const cooldown = new Map();
 
+// 🔥 MODELS (auto fallback)
+const MODELS = [
+  "meta-llama/llama-3-8b-instruct",
+  "meta-llama/llama-3-70b-instruct",
+  "mistralai/mistral-7b-instruct",
+  "google/gemma-7b-it"
+];
+
 client.once('clientReady', () => {
   console.log("Verkadala is running");
 });
 
-// 🔥 MAIN HANDLER (ASYNC FIXED)
+// MAIN
 client.on('messageCreate', async (message) => {
   try {
     if (message.author.bot) return;
@@ -33,7 +39,6 @@ client.on('messageCreate', async (message) => {
     const content = message.content.toLowerCase();
     const userId = message.author.id;
 
-    // 🤖 AI COMMAND
     if (content.startsWith("kadala ai")) {
 
       const now = Date.now();
@@ -46,42 +51,59 @@ client.on('messageCreate', async (message) => {
       cooldown.set(userId, now);
 
       const prompt = message.content.slice(10).trim();
-      if (!prompt) {
-        return message.reply("enna kekka pora sollu");
-      }
+      if (!prompt) return message.reply("enna kekka pora sollu");
 
-      // ⏳ send wait message
+      // wait message
       const tempMsg = await message.reply("oru nimisham...");
 
-      try {
-        const res = await axios.post(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            model: "openchat/openchat-3.5",
-            messages: [
-              {
-                role: "user",
-                content: `Reply in Tamil slang (Tanglish), short and natural.\nUser: ${prompt}`
+      let finalReply = null;
+
+      // 🔥 TRY ALL MODELS
+      for (let i = 0; i < MODELS.length; i++) {
+        const modelName = MODELS[i];
+
+        try {
+          console.log("Trying:", modelName);
+
+          const res = await axios.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            {
+              model: modelName,
+              messages: [
+                {
+                  role: "user",
+                  content: `Reply in Tamil slang (Tanglish), short and natural.\nUser: ${prompt}`
+                }
+              ]
+            },
+            {
+              headers: {
+                "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://kadalabot.onrender.com",
+                "X-Title": "Verkadala Bot"
               }
-            ]
-          },
-          {
-            headers: {
-              "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": "https://kadalabot.onrender.com",
-              "X-Title": "Verkadala Bot"
             }
+          );
+
+          const reply = res.data.choices?.[0]?.message?.content;
+
+          if (reply) {
+            finalReply = reply;
+            console.log("SUCCESS:", modelName);
+            break;
           }
-        );
 
-        const reply = res.data.choices?.[0]?.message?.content;
+        } catch (err) {
+          console.log("FAILED:", modelName);
+        }
+      }
 
-        await tempMsg.edit(reply || "response illa");
-
-      } catch (err) {
-        console.error("AI ERROR:", err.response?.data || err.message);
+      // RESULT
+      if (!finalReply) {
         await tempMsg.edit("edho problem iruku, apram try pannu");
+      } else {
+        await tempMsg.edit(finalReply);
       }
     }
 
@@ -90,5 +112,4 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// LOGIN
 client.login(process.env.TOKEN);
