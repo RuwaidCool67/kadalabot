@@ -10,20 +10,20 @@ app.get("/", (req, res) => res.send("Kadala is Online 🔥"));
 app.listen(process.env.PORT || 3000);
 
 // ================= AI SETUP (GenZ Tamil Personality) =================
-// Note: Ensure GEMINI_KEY is set in your Railway Variables!
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
 
 const systemInstruction = `
-You are 'Kadala Watchman', a peak GenZ Tamil guy.
+You are 'Kadala Watchman', a peak GenZ Tamil guy in a Discord server.
 - Language: Strictly Tanglish (Mix of Tamil and English).
 - Style: Use GenZ slang like 'vibe', 'scene-u', 'mamba', 'lit', 'clutch', 'gubeer', 'pangu', 'maams', 'blood', 'share-u'.
 - Tone: Be funny, sarcastic (nakkaal), and friendly.
 - Address user as: 'da', 'mamba', 'pangu', or 'pulla'.
-- Rules: Keep it short. If they ask something boring, tell them 'Enna mamba scene-u panra?'. Use emojis like 💀, 🔥, 😂, 🫡.
+- Context awareness: You will be provided with the recent chat history. Use it to understand the flow of the conversation, but only reply to the latest message.
+- Rules: Keep it short (1-3 sentences max). Don't be robotic. Use emojis like 💀, 🔥, 😂, 🫡.
 `;
 
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-2.5-flash", // UPDATED: 2.5 is the current working model!
+  model: "gemini-2.5-flash", 
   systemInstruction 
 });
 
@@ -96,7 +96,7 @@ client.once('ready', () => {
         channel.send(`🧠 **Fun Fact:** ${fact}`);
       }
     });
-  }, 10 * 60 * 1000); // 10 minutes
+  }, 10 * 60 * 1000);
 });
 
 // ================= STREAM DETECT =================
@@ -126,7 +126,7 @@ client.on('messageCreate', async (message) => {
   const content = message.content.toLowerCase();
   const userId = message.author.id;
 
-  // AFK Remove Logic
+  // 1. AFK Remove Logic
   if (afkUsers[userId]) {
     const timeAway = Date.now() - afkUsers[userId].time;
     delete afkUsers[userId];
@@ -134,44 +134,66 @@ client.on('messageCreate', async (message) => {
     return message.reply(`dei comeback ah 😏 **${formatTime(timeAway)}** wait panna vachitiye mamba!`);
   }
 
-  // AFK Set Logic
-  if (/^(kadala|kadalai) afk/i.test(content)) {
+  // 2. Specific Hardcoded Commands Check
+  const isAfkCmd = /^(kadala|kadalai) afk/i.test(content);
+  const isVcJoinCmd = /^(kadala|kadalai) (vc join|join vc)/i.test(content);
+  const isVcLeaveCmd = /^(kadala|kadalai) (vc leave|leave vc)/i.test(content);
+  
+  if (isAfkCmd) {
     afkUsers[userId] = { time: Date.now() };
     saveAFK();
     return message.reply("seri da AFK 😴 safe ah poitu vaa mamba!");
   }
 
-  // AI Command Logic: "kadala ai <prompt>"
-  if (content.startsWith("kadala ai ") || content.startsWith("kadalai ai ")) {
-    // Extract everything after "kadala ai" or "kadalai ai"
-    const prompt = message.content.replace(/^(kadala|kadalai) ai /i, '').trim();
-    
-    if (!prompt) return message.reply("Enna pangu, blank ah message anupura? Ethachum kelu! 💀");
-
-    try {
-      const result = await model.generateContent(prompt);
-      let text = result.response.text();
-      return message.reply(text.length > 2000 ? text.substring(0, 1990) + "..." : text);
-    } catch (e) {
-      console.error(e);
-      return message.reply("AI konjam confuse aayiduchu blood. Konja neram kazhuithu vaa! 😵‍💫");
-    }
-  }
-
-  // VC Join Logic
-  if (/^(kadala|kadalai) (vc join|join vc)/i.test(content)) {
+  if (isVcJoinCmd) {
     const vc = message.member.voice.channel;
     if (!vc) return message.reply("VC la po da first-u! 😭");
     joinVoiceChannel({ channelId: vc.id, guildId: vc.guild.id, adapterCreator: vc.guild.voiceAdapterCreator, selfDeaf: false, selfMute: false });
     return message.reply("vanthuruken mamba 😎 vibe panlaam!");
   }
 
-  // VC Leave Logic
-  if (/^(kadala|kadalai) (vc leave|leave vc)/i.test(content)) {
+  if (isVcLeaveCmd) {
     const conn = getVoiceConnection(message.guild.id);
     if (!conn) return message.reply("already veliya thaan mamba iruken! 💀");
     conn.destroy();
     return message.reply("poiten da 🚶 meet you later share-u!");
+  }
+
+  // 3. AI Chat Logic (Context + Triggers)
+  // Trigger if it starts with "kadala <text>" OR if someone replied directly to the bot
+  const isReplyToBot = message.reference && message.mentions.repliedUser?.id === client.user.id;
+  const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(.*)/i);
+
+  if (aiPrefixMatch || isReplyToBot) {
+    await message.channel.sendTyping(); // Shows "Kadala Watchman is typing..."
+
+    let userPrompt = aiPrefixMatch ? aiPrefixMatch[2].trim() : message.content;
+    if (!userPrompt) return message.reply("Enna pangu, blank ah message anupura? Ethachum kelu! 💀");
+
+    try {
+      // Fetch the last 6 messages in the channel to build context
+      const fetchedMessages = await message.channel.messages.fetch({ limit: 6 });
+      let historyText = "--- RECENT CHAT HISTORY ---\n";
+      
+      fetchedMessages.reverse().forEach(msg => {
+        if (msg.content) {
+          const authorName = msg.author.id === client.user.id ? "Kadala Watchman (You)" : msg.author.username;
+          historyText += `${authorName}: ${msg.content}\n`;
+        }
+      });
+      historyText += "--- END HISTORY ---\n\n";
+      
+      // Combine history with the specific instruction to reply
+      const finalPrompt = `${historyText}Now, reply to ${message.author.username}'s latest message.`;
+
+      const result = await model.generateContent(finalPrompt);
+      let text = result.response.text();
+      
+      return message.reply(text.length > 2000 ? text.substring(0, 1990) + "..." : text);
+    } catch (e) {
+      console.error(e);
+      return message.reply("AI konjam confuse aayiduchu blood. Konja neram kazhuithu vaa! 😵‍💫");
+    }
   }
 });
 
