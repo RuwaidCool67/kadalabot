@@ -1,14 +1,31 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
+const { GoogleGenAI } = require("@google/genai"); 
 const express = require('express');
 const fs = require('fs');
 
 // ================= KEEP ALIVE =================
 const app = express();
-app.get("/", (req, res) => res.send("Bot alive"));
+app.get("/", (req, res) => res.send("Kadala is Online 🔥"));
 app.listen(process.env.PORT || 3000);
 
-// ================= CLIENT =================
+// ================= AI SETUP (GenZ Tamil Personality) =================
+const genAI = new GoogleGenAI(process.env.GEMINI_KEY);
+const systemInstruction = `
+You are 'Kadala Watchman', a peak GenZ Tamil guy.
+- Language: Strictly Tanglish (Mix of Tamil and English).
+- Style: Use GenZ slang like 'vibe', 'scene-u', 'mamba', 'lit', 'clutch', 'gubeer', 'pangu', 'maams', 'blood', 'share-u'.
+- Tone: Be funny, sarcastic (nakkaal), and friendly.
+- Address user as: 'da', 'mamba', 'pangu', or 'pulla'.
+- Rules: Keep it short. If they ask something boring, tell them 'Enna mamba scene-u panra?'. Use emojis like 💀, 🔥, 😂, 🫡.
+`;
+
+const model = genAI.getGenerativeModel({ 
+  model: "gemini-1.5-flash", 
+  systemInstruction 
+});
+
+// ================= CLIENT SETUP =================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -20,151 +37,135 @@ const client = new Client({
 
 const processedMessages = new Set();
 
-// ================= AFK =================
+// ================= AFK SYSTEM =================
 const FILE = './afk.json';
 let afkUsers = fs.existsSync(FILE) ? JSON.parse(fs.readFileSync(FILE)) : {};
+const saveAFK = () => fs.writeFileSync(FILE, JSON.stringify(afkUsers, null, 2));
 
-function saveAFK() {
-  fs.writeFileSync(FILE, JSON.stringify(afkUsers, null, 2));
-}
-
-function formatTime(ms) {
+const formatTime = (ms) => {
   const sec = Math.floor(ms / 1000) % 60;
   const min = Math.floor(ms / (1000 * 60)) % 60;
   const hr = Math.floor(ms / (1000 * 60 * 60));
   return `${hr}h ${min}m ${sec}s`;
-}
+};
 
 // ================= 100 FUN FACTS =================
 const funFacts = [
   "Octopus has 3 hearts", "Honey never spoils", "Bananas are berries", "Sharks older than trees",
   "Space smells like metal", "Butterflies taste with feet", "Cows have best friends", "Penguins propose with pebbles",
-  "Sun is white actually", "Your brain uses 20% energy", "Hot water freezes faster", "Sloths can hold breath longer than dolphins",
-  "Wombat poop is cube shaped", "Humans glow in dark (low level)", "Ants don’t sleep", "Koalas have fingerprints",
-  "Jellyfish are immortal (some)", "Venus spins backwards", "Tardigrades survive space", "Snakes can fly (glide)",
+  "Sun is white actually", "Your brain uses 20% energy", "Hot water freezes faster", "Sloths hold breath longer than dolphins",
+  "Wombat poop is cube shaped", "Humans glow in dark (low level)", "Ants don't sleep", "Koalas have fingerprints",
+  "Jellyfish are immortal (some)", "Venus spins backwards", "Tardigrades survive space", "Snakes can glide",
   "Octopus escapes jars easily", "Frogs drink through skin", "Cats sleep 70% of life", "Dolphins have names",
   "Trees can communicate", "Sharks detect electricity", "Babies have more bones", "Fire has no shadow",
   "Clouds are heavy", "Birds don’t urinate", "Spiders have blue blood", "Earth not perfect sphere",
-  "Some metals explode in water", "Sound travels faster in water", "Human nose detects trillion smells", "Moon moving away slowly",
-  "Neptune has fastest winds", "Gold edible in small amounts", "Some turtles breathe through butt", "Sea otters hold hands",
-  "Glass is slow liquid (sorta)", "Lightning hotter than sun", "Humans share DNA with bananas", "Some fish change gender",
-  "Chickens remember faces", "Space is silent", "Your stomach gets new lining", "Brain feels no pain",
-  "Rats laugh", "Plants grow faster with music", "Water expands when freezing", "Some crabs use tools",
-  "Sharks never stop swimming", "Some frogs freeze and live", "Earth rotates slower over time", "Some whales sing songs",
-  "Eyes heal fast", "Some birds mimic humans", "Ants farm fungi", "Some fish walk on land",
-  "Rain has smell called petrichor", "Some snakes see heat", "Butterflies remember being caterpillars", "Sun will die someday",
-  "Some bacteria eat radiation", "Owls rotate head 270°", "Some lizards run on water", "Earth has magnetic poles shifting",
-  "Bees dance to communicate", "Some frogs glow", "Some animals see UV", "Elephants mourn death",
-  "Some birds sleep mid-flight", "Some spiders fly using silk", "Your body has electricity", "Stars twinkle due to atmosphere",
-  "Some insects survive without head", "Time moves slower near gravity", "Black holes bend time", "Some fish glow in dark",
-  "Humans have unique tongue print", "Some birds steal food", "Volcano lightning exists", "Some animals never age",
-  "Some worms cut regenerate", "Some fish freeze and survive", "Some animals fake death", "Some animals invisible in water",
-  "Moon causes tides", "Some clouds glow at night", "Some fish see polarized light", "Some birds navigate via stars",
-  "Some plants eat insects", "Some bacteria survive vacuum", "Some insects hear with legs", "Some animals regrow limbs",
-  "Some animals live without brain", "Wombats poop in cubes to mark territory", "Sloths take two weeks to digest food", "A day on Venus is longer than a year on Venus"
+  "Metals explode in water", "Sound faster in water", "Nose detects trillion smells", "Moon moving away slowly",
+  "Neptune has fastest winds", "Gold is edible", "Turtles breathe through butt", "Sea otters hold hands",
+  "Glass is slow liquid", "Lightning hotter than sun", "Human DNA 50% banana", "Fish change gender",
+  "Chickens remember faces", "Space is silent", "Stomach gets new lining", "Brain feels no pain",
+  "Rats laugh", "Plants love music", "Water expands when freezing", "Crabs use tools",
+  "Sharks never stop swimming", "Frogs freeze and live", "Earth rotates slower", "Whales sing songs",
+  "Eyes heal fast", "Birds mimic humans", "Ants farm fungi", "Fish walk on land",
+  "Rain smell is Petrichor", "Snakes see heat", "Butterflies remember being caterpillars", "Sun will die",
+  "Bacteria eat radiation", "Owls rotate head 270°", "Lizards run on water", "Magnetic poles shift",
+  "Bees dance", "Some frogs glow", "Animals see UV", "Elephants mourn",
+  "Birds sleep mid-flight", "Spiders fly using silk", "Body has electricity", "Stars twinkle",
+  "Insects live without head", "Time moves slower near gravity", "Black holes bend time", "Fish glow",
+  "Unique tongue prints", "Birds steal food", "Volcano lightning exists", "Some animals never age",
+  "Worms regenerate", "Fish freeze and survive", "Animals fake death", "Invisible in water",
+  "Moon causes tides", "Clouds glow at night", "Polarized light vision", "Navigate via stars",
+  "Plants eat insects", "Bacteria survive vacuum", "Insects hear with legs", "Regrow limbs",
+  "Live without brain", "Wombats poop cubes", "Sloths digest in 2 weeks", "Venus day > year"
 ];
 
-// ================= READY =================
+// ================= EVENTS =================
 client.once('ready', () => {
   console.log("Verkadala running 🔥");
-
-  // ================= FUN FACT LOOP (Every 10 mins) =================
+  
+  // Fun Fact Loop (10 mins)
   setInterval(() => {
     client.guilds.cache.forEach(guild => {
-      // Find a channel named 'general', or fallback to system channel, or fallback to first available text channel
-      const generalChannel = guild.channels.cache.find(c => c.isTextBased() && c.name.includes('general')) 
+      const channel = guild.channels.cache.find(c => c.isTextBased() && c.name.includes('general')) 
         || guild.systemChannel 
         || guild.channels.cache.find(c => c.isTextBased() && c.permissionsFor(guild.members.me).has('SendMessages'));
-
-      if (!generalChannel) return;
-
-      const fact = funFacts[Math.floor(Math.random() * funFacts.length)];
-      generalChannel.send(`🧠 **Fun Fact:** ${fact}`);
+      
+      if (channel) {
+        const fact = funFacts[Math.floor(Math.random() * funFacts.length)];
+        channel.send(`🧠 **Fun Fact:** ${fact}`);
+      }
     });
-  }, 10 * 60 * 1000); // 10 minutes in milliseconds
+  }, 10 * 60 * 1000);
 });
 
-// ================= STREAM DETECT =================
+// Stream Presence Logic
 client.on('voiceStateUpdate', (oldState, newState) => {
-  const member = newState.member;
-
-  if (newState.streaming) {
-    const vc = newState.channel;
-    if (!vc) return;
-
-    let connection = getVoiceConnection(vc.guild.id);
-
-    if (!connection) {
-      connection = joinVoiceChannel({
-        channelId: vc.id,
-        guildId: vc.guild.id,
-        adapterCreator: vc.guild.voiceAdapterCreator,
-        selfDeaf: false,
-        selfMute: false
+  if (newState.streaming && newState.channel) {
+    if (!getVoiceConnection(newState.guild.id)) {
+      joinVoiceChannel({
+        channelId: newState.channel.id,
+        guildId: newState.guild.id,
+        adapterCreator: newState.guild.voiceAdapterCreator,
+        selfDeaf: false, selfMute: false
       });
     }
-
     client.user.setPresence({
-      activities: [{
-        name: `${member.user.username} stream paakuren 👀`,
-        type: 3
-      }],
+      activities: [{ name: `${newState.member.user.username} stream paakuren 👀`, type: ActivityType.Watching }],
       status: "online"
     });
   }
 });
 
-// ================= MESSAGE =================
+// Main Message Handler
 client.on('messageCreate', async (message) => {
-  if (processedMessages.has(message.id)) return;
+  if (processedMessages.has(message.id) || message.author.bot) return;
   processedMessages.add(message.id);
-  setTimeout(() => processedMessages.delete(message.id), 10000);
-
-  if (message.author.bot) return;
+  setTimeout(() => processedMessages.delete(message.id), 5000);
 
   const content = message.content.toLowerCase();
   const userId = message.author.id;
 
-  // AFK REMOVE
+  // AFK Logic
   if (afkUsers[userId]) {
     const timeAway = Date.now() - afkUsers[userId].time;
     delete afkUsers[userId];
     saveAFK();
-    return message.reply(`dei comeback ah 😏 ${formatTime(timeAway)}`);
+    return message.reply(`dei comeback ah 😏 **${formatTime(timeAway)}** wait panna vachitiye mamba!`);
   }
 
-  // AFK SET
   if (/^(kadala|kadalai) afk/i.test(content)) {
     afkUsers[userId] = { time: Date.now() };
     saveAFK();
-    return message.reply("seri da AFK 😴");
+    return message.reply("seri da AFK 😴 safe ah poitu vaa mamba!");
   }
 
-  // VC JOIN (Flexible: "kadala/kadalai vc join" OR "kadala/kadalai join vc")
+  // AI Command
+  if (content.startsWith("kadala ai") || content.startsWith("kadalai ai")) {
+    const prompt = message.content.split(' ').slice(2).join(' ');
+    if (!prompt) return message.reply("Enna pangu, blank ah message anupura? Ethachum kelu! 💀");
+
+    try {
+      const result = await model.generateContent(prompt);
+      let text = result.response.text();
+      return message.reply(text.length > 2000 ? text.substring(0, 1990) + "..." : text);
+    } catch (e) {
+      return message.reply("AI konjam confuse aayiduchu blood. Konja neram kazhuithu vaa! 😵‍💫");
+    }
+  }
+
+  // VC Commands
   if (/^(kadala|kadalai) (vc join|join vc)/i.test(content)) {
     const vc = message.member.voice.channel;
-    if (!vc) return message.reply("VC la po da 😭");
-
-    joinVoiceChannel({
-      channelId: vc.id,
-      guildId: vc.guild.id,
-      adapterCreator: vc.guild.voiceAdapterCreator,
-      selfDeaf: false,
-      selfMute: false
-    });
-
-    return message.reply("vanthuruken da 😎");
+    if (!vc) return message.reply("VC la po da first-u! 😭");
+    joinVoiceChannel({ channelId: vc.id, guildId: vc.guild.id, adapterCreator: vc.guild.voiceAdapterCreator, selfDeaf: false, selfMute: false });
+    return message.reply("vanthuruken mamba 😎 vibe panlaam!");
   }
 
-  // VC LEAVE (Flexible: "kadala/kadalai vc leave" OR "kadala/kadalai leave vc")
   if (/^(kadala|kadalai) (vc leave|leave vc)/i.test(content)) {
-    const connection = getVoiceConnection(message.guild.id);
-    if (!connection) return message.reply("already veliya 😭");
-
-    connection.destroy();
-    return message.reply("poiten da 🚶");
+    const conn = getVoiceConnection(message.guild.id);
+    if (!conn) return message.reply("already veliya thaan mamba iruken! 💀");
+    conn.destroy();
+    return message.reply("poiten da 🚶 meet you later share-u!");
   }
 });
 
-// ================= LOGIN =================
 client.login(process.env.TOKEN);
