@@ -1,17 +1,14 @@
 const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
-const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const { GoogleGenerativeAI } = require("@google/generative-ai"); 
-const { Player, QueryType } = require('discord-player'); // Added QueryType for the bypass!
 const express = require('express');
 const fs = require('fs');
 
 // ================= KEEP ALIVE =================
 const app = express();
-app.get("/", (req, res) => res.send("Kadala Watchman is Online and Vibing! 🔥"));
+app.get("/", (req, res) => res.send("Kadala Watchman is Online, Chatting, and Rotating Keys! 🔑🔥"));
 app.listen(process.env.PORT || 3000);
 
-// ================= AI SETUP (Gemini Chat) =================
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
+// ================= AI SETUP (BULLETPROOF ROTATION) =================
 const systemInstruction = `
 You are 'Kadala Watchman', a peak GenZ Tamil guy in a Discord server.
 - Language: Strictly Tanglish (Mix of Tamil and English).
@@ -21,34 +18,46 @@ You are 'Kadala Watchman', a peak GenZ Tamil guy in a Discord server.
 - Context awareness: You will be provided with the recent chat history. Use it to understand the flow, but only reply to the latest message.
 - Rules: Keep it short (1-3 sentences max). Don't be robotic. Use emojis like 💀, 🔥, 😂, 🫡.
 `;
-const chatModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction });
+
+let currentKeyIndex = -1;
+
+function getAvailableKeys() {
+  // Pulls keys fresh and filters out completely empty or undefined ones
+  return [
+    process.env.GEMINI_KEY_1,
+    process.env.GEMINI_KEY_2,
+    process.env.GEMINI_KEY_3
+  ].filter(key => key !== undefined && key.trim() !== '');
+}
+
+function getNextChatModel() {
+  const geminiKeys = getAvailableKeys();
+  
+  if (geminiKeys.length === 0) {
+    console.error("No GEMINI_KEYs found in Railway Variables! 💀");
+    return null;
+  }
+  
+  // Strict rotation logic
+  currentKeyIndex = (currentKeyIndex + 1) % geminiKeys.length; 
+  const keyToUse = geminiKeys[currentKeyIndex];
+  
+  console.log(`[AI Status] Total Keys: ${geminiKeys.length} | Currently Using Slot: ${currentKeyIndex + 1}`);
+  
+  const genAI = new GoogleGenerativeAI(keyToUse);
+  return genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction });
+}
 
 // ================= CLIENT SETUP =================
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.MessageContent
   ]
 });
 
-// ================= MUSIC PLAYER SETUP =================
-const player = new Player(client);
-
-player.extractors.loadDefault().then(() => {
-  console.log("Music Extractors loaded successfully! 🎧");
-}).catch(err => console.error("Error loading extractors:", err));
-
-player.events.on('playerStart', (queue, track) => {
-  queue.metadata.channel.send(`🎧 Ippo idhaan trend-u! Playing: **${track.title}** 🔥 Vibe panlaam mamba!`);
-});
-
-player.events.on('emptyQueue', (queue) => {
-  queue.metadata.channel.send(`Pattu mudinjichu pangu. Vera ethaachum play pannu, illana na kelamburen! 🚶`);
-});
-
-// ================= UTILITIES & AFK =================
+// ================= UTILITIES, AFK & RATE LIMITER =================
 const processedMessages = new Set();
 const FILE = './afk.json';
 let afkUsers = fs.existsSync(FILE) ? JSON.parse(fs.readFileSync(FILE)) : {};
@@ -58,16 +67,56 @@ const formatTime = (ms) => {
   const sec = Math.floor(ms / 1000) % 60;
   const min = Math.floor(ms / (1000 * 60)) % 60;
   const hr = Math.floor(ms / (1000 * 60 * 60));
-  return `${hr}h ${min}m ${sec}s`;
+  return hr > 0 ? `${hr}h ${min}m ${sec}s` : `${min}m ${sec}s`;
 };
 
-// ================= 100 FUN FACTS =================
-const funFacts = ["Octopus has 3 hearts", "Honey never spoils", "Bananas are berries", "Sharks older than trees", "Space smells like metal", "Butterflies taste with feet", "Cows have best friends", "Penguins propose with pebbles", "Sun is white actually", "Your brain uses 20% energy", "Hot water freezes faster", "Sloths hold breath longer than dolphins", "Wombat poop is cube shaped", "Humans glow in dark (low level)", "Ants don't sleep", "Koalas have fingerprints", "Jellyfish are immortal (some)", "Venus spins backwards", "Tardigrades survive space", "Snakes can glide", "Octopus escapes jars easily", "Frogs drink through skin", "Cats sleep 70% of life", "Dolphins have names", "Trees can communicate", "Sharks detect electricity", "Babies have more bones", "Fire has no shadow", "Clouds are heavy", "Birds don’t urinate", "Spiders have blue blood", "Earth not perfect sphere", "Metals explode in water", "Sound faster in water", "Nose detects trillion smells", "Moon moving away slowly", "Neptune has fastest winds", "Gold is edible", "Turtles breathe through butt", "Sea otters hold hands", "Glass is slow liquid", "Lightning hotter than sun", "Human DNA 50% banana", "Fish change gender", "Chickens remember faces", "Space is silent", "Stomach gets new lining", "Brain feels no pain", "Rats laugh", "Plants love music", "Water expands when freezing", "Crabs use tools", "Sharks never stop swimming", "Frogs freeze and live", "Earth rotates slower", "Whales sing songs", "Eyes heal fast", "Birds mimic humans", "Ants farm fungi", "Fish walk on land", "Rain smell is Petrichor", "Snakes see heat", "Butterflies remember being caterpillars", "Sun will die", "Bacteria eat radiation", "Owls rotate head 270°", "Lizards run on water", "Magnetic poles shift", "Bees dance", "Some frogs glow", "Animals see UV", "Elephants mourn", "Birds sleep mid-flight", "Spiders fly using silk", "Body has electricity", "Stars twinkle", "Insects live without head", "Time moves slower near gravity", "Black holes bend time", "Fish glow", "Unique tongue prints", "Birds steal food", "Volcano lightning exists", "Some animals never age", "Worms regenerate", "Fish freeze and survive", "Animals fake death", "Invisible in water", "Moon causes tides", "Clouds glow at night", "Polarized light vision", "Navigate via stars", "Plants eat insects", "Bacteria survive vacuum", "Insects hear with legs", "Regrow limbs", "Live without brain", "Wombats poop cubes", "Sloths digest in 2 weeks", "Venus day > year"];
+// 🛑 Rate Limiter System for AI
+const aiUsage = {}; 
+
+function checkRateLimit(userId) {
+  const now = Date.now();
+  if (!aiUsage[userId]) aiUsage[userId] = { history: [], blockedUntil: 0 };
+  const user = aiUsage[userId];
+
+  // 1. Check if user is in 10-min timeout jail
+  if (user.blockedUntil > now) {
+    return { allowed: false, reason: 'timeout', timeLeft: user.blockedUntil - now };
+  }
+
+  // Clear old history (older than 10 mins)
+  user.history = user.history.filter(t => now - t < 10 * 60 * 1000);
+
+  if (user.history.length > 0) {
+    const lastTime = user.history[user.history.length - 1];
+    // 2. Check 10-second cooldown
+    if (now - lastTime < 10000) {
+      return { allowed: false, reason: 'cooldown', timeLeft: 10000 - (now - lastTime) };
+    }
+  }
+
+  // 3. Check 5 messages limit
+  if (user.history.length >= 5) {
+    user.blockedUntil = now + 10 * 60 * 1000; // Block for 10 mins
+    return { allowed: false, reason: 'timeout', timeLeft: 10 * 60 * 1000 };
+  }
+
+  user.history.push(now);
+  return { allowed: true };
+}
+
+// ================= FUN FACTS =================
+const funFacts = ["Octopus has 3 hearts", "Honey never spoils", "Bananas are berries", "Sharks older than trees", "Space smells like metal", "Sun is white actually", "Rats laugh", "Sharks never stop swimming"];
 
 // ================= EVENTS =================
 client.once('ready', () => {
-  console.log("Verkadala is Fully Operational 🔥");
+  const keysCount = getAvailableKeys().length;
+  console.log(`Verkadala is Fully Operational 🔥 | Loaded ${keysCount} API Keys.`);
   
+  client.user.setPresence({
+    activities: [{ name: `Server Chat 👀`, type: ActivityType.Watching }],
+    status: "online"
+  });
+
   setInterval(() => {
     client.guilds.cache.forEach(guild => {
       const channel = guild.channels.cache.find(c => c.isTextBased() && c.name.includes('general')) || guild.systemChannel || guild.channels.cache.find(c => c.isTextBased() && c.permissionsFor(guild.members.me).has('SendMessages'));
@@ -79,23 +128,6 @@ client.once('ready', () => {
   }, 10 * 60 * 1000); 
 });
 
-client.on('voiceStateUpdate', (oldState, newState) => {
-  if (newState.streaming && newState.channel) {
-    if (!getVoiceConnection(newState.guild.id)) {
-      joinVoiceChannel({
-        channelId: newState.channel.id,
-        guildId: newState.guild.id,
-        adapterCreator: newState.guild.voiceAdapterCreator,
-        selfDeaf: false, selfMute: false
-      });
-    }
-    client.user.setPresence({
-      activities: [{ name: `${newState.member.user.username} stream paakuren 👀`, type: ActivityType.Watching }],
-      status: "online"
-    });
-  }
-});
-
 // ================= MAIN MESSAGE HANDLER =================
 client.on('messageCreate', async (message) => {
   if (processedMessages.has(message.id) || message.author.bot) return;
@@ -105,110 +137,51 @@ client.on('messageCreate', async (message) => {
   const content = message.content.toLowerCase();
   const userId = message.author.id;
 
-  // 1. AFK Logic
+  // 1. AFK Logic (Comeback)
   if (afkUsers[userId]) {
     const timeAway = Date.now() - afkUsers[userId].time;
+    const reasonText = afkUsers[userId].reason ? `(Reason: ${afkUsers[userId].reason})` : "";
     delete afkUsers[userId];
     saveAFK();
-    return message.reply(`dei comeback ah 😏 **${formatTime(timeAway)}** wait panna vachitiye mamba!`);
+    return message.reply(`dei comeback ah 😏 **${formatTime(timeAway)}** wait panna vachitiye mamba! ${reasonText}`);
   }
 
-  if (/^(kadala|kadalai) afk/i.test(content)) {
-    afkUsers[userId] = { time: Date.now() };
+  // 2. Set AFK (With Reason)
+  const afkMatch = content.match(/^(kadala|kadalai) afk\s*(.*)/i);
+  if (afkMatch) {
+    const reason = afkMatch[2].trim() || "Therila da, ethuko poirukan!";
+    afkUsers[userId] = { time: Date.now(), reason: reason };
     saveAFK();
-    return message.reply("seri da AFK 😴 safe ah poitu vaa mamba!");
-  }
-
-  // 2. Simple VC Commands
-  if (/^(kadala|kadalai) (vc join|join vc)/i.test(content)) {
-    const vc = message.member.voice.channel;
-    if (!vc) return message.reply("VC la po da first-u! 😭");
-    joinVoiceChannel({ channelId: vc.id, guildId: vc.guild.id, adapterCreator: vc.guild.voiceAdapterCreator, selfDeaf: false, selfMute: false });
-    return message.reply("vanthuruken mamba 😎 vibe panlaam!");
-  }
-
-  if (/^(kadala|kadalai) (vc leave|leave vc)/i.test(content)) {
-    const conn = getVoiceConnection(message.guild.id);
-    if (!conn) return message.reply("already veliya thaan mamba iruken! 💀");
-    conn.destroy();
-    return message.reply("poiten da 🚶 meet you later share-u!");
-  }
-
-  // ================= DJ COMMANDS =================
-  const isDJCommand = /^(kadala|kadalai) (play|skip|stop|queue|pause|resume)/i.test(content);
-  
-  if (isDJCommand) {
-    const args = content.split(' ');
-    const command = args[1]; 
-    const query = message.content.split(' ').slice(2).join(' '); 
-    const queue = player.nodes.get(message.guild.id);
-    const channel = message.member.voice.channel;
-
-    switch (command) {
-      case 'play':
-        if (!query) return message.reply("Enna paatu venum nu sollu da pangu! 🎵");
-        if (!channel) return message.reply("VC la poi okkaru first-u! Appo thaan paatu poduvean 😭");
-        
-        await message.channel.send(`Told you I'm a DJ! SoundCloud la theditu iruken wait pannu... 🔍`);
-        try {
-          await player.play(channel, query, {
-            searchEngine: QueryType.SOUNDCLOUD_SEARCH, // 👈 THE CLUTCH FIX (Bypasses YouTube completely)
-            nodeOptions: { metadata: message, leaveOnEmpty: true, leaveOnEnd: false }
-          });
-        } catch (e) {
-          console.error(e);
-          return message.reply("Paatu kedaikala da mamba! Spelling ah check pannu illa vera paatu kelu. 💀");
-        }
-        break;
-
-      case 'skip':
-        if (!queue || !queue.isPlaying()) return message.reply("Etha da skip panrathu? Paatayum kaanom onnayum kaanom! 💀");
-        queue.node.skip();
-        return message.reply("Intha paatu vibe aagala pola, OP Skip done! ⏭️");
-
-      case 'stop':
-        if (!queue) return message.reply("Naanga already amaithiya thaan irukom! 🤫");
-        queue.delete();
-        return message.reply("Paatu off panniyachu, naa appidiye kelamburen! 🚶");
-
-      case 'pause':
-        if (!queue || !queue.isPlaying()) return message.reply("Onnume odalaye da! 💀");
-        queue.node.setPaused(true);
-        return message.reply("Paatu konja neram pause la irukattum ⏸️");
-
-      case 'resume':
-        if (!queue || queue.isPlaying()) return message.reply("Already oditu thaan da iruku! 🎶");
-        queue.node.setPaused(false);
-        return message.reply("Vibe thirumba start aagiduchu! ▶️");
-
-      case 'queue':
-        if (!queue || !queue.isPlaying()) return message.reply("Queue kaaliya iruku da mamba! Kadala play potu vibe etthu! 💿");
-        
-        const currentTrack = queue.currentTrack;
-        const tracks = queue.tracks.toArray().slice(0, 5); 
-        
-        let queueString = `**🎧 Ippo Oduthu:** ${currentTrack.title}\n\n**Up Next-u:**\n`;
-        if (tracks.length === 0) queueString += "Avlo thaan, queue la vera paatu illai! ❌";
-        else {
-          tracks.forEach((track, index) => {
-            queueString += `**${index + 1}.** ${track.title}\n`;
-          });
-        }
-        return message.reply(queueString);
-    }
-    return;
+    return message.reply(`seri da AFK 😴 **Reason:** ${reason} | safe ah poitu vaa mamba!`);
   }
 
   // ================= AI CHAT LOGIC =================
   const isReplyToBot = message.reference && message.mentions.repliedUser?.id === client.user.id;
-  const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(?!afk|play|skip|stop|queue|pause|resume|vc)(.*)/i);
+  // Simplified regex since music commands are gone
+  const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(?!afk)(.*)/i);
 
   if (aiPrefixMatch || isReplyToBot) {
-    await message.channel.sendTyping();
     let userPrompt = aiPrefixMatch ? aiPrefixMatch[2].trim() : message.content;
     if (!userPrompt) return message.reply("Enna pangu, blank ah message anupura? Ethachum kelu! 💀");
 
+    // 🛑 RATE LIMITER 🛑
+    const rl = checkRateLimit(userId);
+    if (!rl.allowed) {
+      if (rl.reason === 'cooldown') {
+        const secs = Math.ceil(rl.timeLeft / 1000);
+        return message.reply(`Dei mamba, moochu vaanga time kudu da! 🛑 Wait for **${secs} seconds** before you talk to me again.`);
+      } else if (rl.reason === 'timeout') {
+        const mins = Math.ceil(rl.timeLeft / 60000);
+        return message.reply(`Dei 5 times mela pesi over-ah usura vangita! 💀 API limit save pannanum. Nee oru **${mins} minutes** jail la iru (AI chat mattum). Adhuku apram vaa!`);
+      }
+    }
+
+    await message.channel.sendTyping();
+
     try {
+      const chatModel = getNextChatModel(); 
+      if (!chatModel) return message.reply("Admin mamba, API keys add panave illa pola! Check the Railway Variables da! 😭");
+
       const fetchedMessages = await message.channel.messages.fetch({ limit: 6 });
       let historyText = "--- RECENT CHAT HISTORY ---\n";
       fetchedMessages.reverse().forEach(msg => {
@@ -225,7 +198,7 @@ client.on('messageCreate', async (message) => {
       return message.reply(text.length > 2000 ? text.substring(0, 1990) + "..." : text);
     } catch (e) {
       console.error(e);
-      return message.reply("AI konjam confuse aayiduchu blood. Konja neram kazhuithu vaa! 😵‍💫");
+      return message.reply("AI konjam confuse aayiduchu blood (Oruvela indha key um limit aayiduchoo?). Konja neram kazhuithu vaa! 😵‍💫");
     }
   }
 });
