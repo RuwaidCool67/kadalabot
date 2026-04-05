@@ -5,10 +5,10 @@ const fs = require('fs');
 
 // ================= KEEP ALIVE =================
 const app = express();
-app.get("/", (req, res) => res.send("Kadala Watchman is Online, Chatting, and Rotating Keys! 🔑🔥"));
+app.get("/", (req, res) => res.send("Kadala Watchman is Online, Chatting, and Auto-Rotating Keys! 🔑🔥"));
 app.listen(process.env.PORT || 3000);
 
-// ================= AI SETUP (BULLETPROOF ROTATION) =================
+// ================= AI SETUP (AUTO-FAILOVER ROTATION) =================
 const systemInstruction = `
 You are 'Kadala Watchman', a peak GenZ Tamil guy in a Discord server.
 - Language: Strictly Tanglish (Mix of Tamil and English).
@@ -22,7 +22,6 @@ You are 'Kadala Watchman', a peak GenZ Tamil guy in a Discord server.
 let currentKeyIndex = -1;
 
 function getAvailableKeys() {
-  // Pulls keys fresh and filters out completely empty or undefined ones
   return [
     process.env.GEMINI_KEY_1,
     process.env.GEMINI_KEY_2,
@@ -32,17 +31,12 @@ function getAvailableKeys() {
 
 function getNextChatModel() {
   const geminiKeys = getAvailableKeys();
+  if (geminiKeys.length === 0) return null;
   
-  if (geminiKeys.length === 0) {
-    console.error("No GEMINI_KEYs found in Railway Variables! 💀");
-    return null;
-  }
-  
-  // Strict rotation logic
   currentKeyIndex = (currentKeyIndex + 1) % geminiKeys.length; 
   const keyToUse = geminiKeys[currentKeyIndex];
   
-  console.log(`[AI Status] Total Keys: ${geminiKeys.length} | Currently Using Slot: ${currentKeyIndex + 1}`);
+  console.log(`[AI Status] Trying Slot: ${currentKeyIndex + 1}`);
   
   const genAI = new GoogleGenerativeAI(keyToUse);
   return genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction });
@@ -78,25 +72,17 @@ function checkRateLimit(userId) {
   if (!aiUsage[userId]) aiUsage[userId] = { history: [], blockedUntil: 0 };
   const user = aiUsage[userId];
 
-  // 1. Check if user is in 10-min timeout jail
-  if (user.blockedUntil > now) {
-    return { allowed: false, reason: 'timeout', timeLeft: user.blockedUntil - now };
-  }
+  if (user.blockedUntil > now) return { allowed: false, reason: 'timeout', timeLeft: user.blockedUntil - now };
 
-  // Clear old history (older than 10 mins)
   user.history = user.history.filter(t => now - t < 10 * 60 * 1000);
 
   if (user.history.length > 0) {
     const lastTime = user.history[user.history.length - 1];
-    // 2. Check 10-second cooldown
-    if (now - lastTime < 10000) {
-      return { allowed: false, reason: 'cooldown', timeLeft: 10000 - (now - lastTime) };
-    }
+    if (now - lastTime < 10000) return { allowed: false, reason: 'cooldown', timeLeft: 10000 - (now - lastTime) };
   }
 
-  // 3. Check 5 messages limit
   if (user.history.length >= 5) {
-    user.blockedUntil = now + 10 * 60 * 1000; // Block for 10 mins
+    user.blockedUntil = now + 10 * 60 * 1000; 
     return { allowed: false, reason: 'timeout', timeLeft: 10 * 60 * 1000 };
   }
 
@@ -104,7 +90,6 @@ function checkRateLimit(userId) {
   return { allowed: true };
 }
 
-// ================= FUN FACTS =================
 const funFacts = ["Octopus has 3 hearts", "Honey never spoils", "Bananas are berries", "Sharks older than trees", "Space smells like metal", "Sun is white actually", "Rats laugh", "Sharks never stop swimming"];
 
 // ================= EVENTS =================
@@ -137,7 +122,7 @@ client.on('messageCreate', async (message) => {
   const content = message.content.toLowerCase();
   const userId = message.author.id;
 
-  // 1. AFK Logic (Comeback)
+  // 1. AFK Logic
   if (afkUsers[userId]) {
     const timeAway = Date.now() - afkUsers[userId].time;
     const reasonText = afkUsers[userId].reason ? `(Reason: ${afkUsers[userId].reason})` : "";
@@ -146,7 +131,6 @@ client.on('messageCreate', async (message) => {
     return message.reply(`dei comeback ah 😏 **${formatTime(timeAway)}** wait panna vachitiye mamba! ${reasonText}`);
   }
 
-  // 2. Set AFK (With Reason)
   const afkMatch = content.match(/^(kadala|kadalai) afk\s*(.*)/i);
   if (afkMatch) {
     const reason = afkMatch[2].trim() || "Therila da, ethuko poirukan!";
@@ -157,14 +141,12 @@ client.on('messageCreate', async (message) => {
 
   // ================= AI CHAT LOGIC =================
   const isReplyToBot = message.reference && message.mentions.repliedUser?.id === client.user.id;
-  // Simplified regex since music commands are gone
   const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(?!afk)(.*)/i);
 
   if (aiPrefixMatch || isReplyToBot) {
     let userPrompt = aiPrefixMatch ? aiPrefixMatch[2].trim() : message.content;
     if (!userPrompt) return message.reply("Enna pangu, blank ah message anupura? Ethachum kelu! 💀");
 
-    // 🛑 RATE LIMITER 🛑
     const rl = checkRateLimit(userId);
     if (!rl.allowed) {
       if (rl.reason === 'cooldown') {
@@ -172,34 +154,54 @@ client.on('messageCreate', async (message) => {
         return message.reply(`Dei mamba, moochu vaanga time kudu da! 🛑 Wait for **${secs} seconds** before you talk to me again.`);
       } else if (rl.reason === 'timeout') {
         const mins = Math.ceil(rl.timeLeft / 60000);
-        return message.reply(`Dei 5 times mela pesi over-ah usura vangita! 💀 API limit save pannanum. Nee oru **${mins} minutes** jail la iru (AI chat mattum). Adhuku apram vaa!`);
+        return message.reply(`Dei 5 times mela pesi over-ah usura vangita! 💀 API limit save pannanum. Nee oru **${mins} minutes** jail la iru.`);
       }
     }
 
     await message.channel.sendTyping();
 
-    try {
-      const chatModel = getNextChatModel(); 
-      if (!chatModel) return message.reply("Admin mamba, API keys add panave illa pola! Check the Railway Variables da! 😭");
+    // 🛑 AUTO-FAILOVER LOGIC 🛑
+    const totalKeys = getAvailableKeys().length;
+    let attempts = 0;
+    let success = false;
+    let finalResponseText = "";
 
-      const fetchedMessages = await message.channel.messages.fetch({ limit: 6 });
-      let historyText = "--- RECENT CHAT HISTORY ---\n";
-      fetchedMessages.reverse().forEach(msg => {
-        if (msg.content) {
-          const authorName = msg.author.id === client.user.id ? "Kadala Watchman" : msg.author.username;
-          historyText += `${authorName}: ${msg.content}\n`;
+    const fetchedMessages = await message.channel.messages.fetch({ limit: 6 });
+    let historyText = "--- RECENT CHAT HISTORY ---\n";
+    fetchedMessages.reverse().forEach(msg => {
+      if (msg.content) {
+        const authorName = msg.author.id === client.user.id ? "Kadala Watchman" : msg.author.username;
+        historyText += `${authorName}: ${msg.content}\n`;
+      }
+    });
+    historyText += "--- END HISTORY ---\n\n";
+    const finalPrompt = `${historyText}Now, reply to ${message.author.username}'s latest message.`;
+
+    while (attempts < totalKeys && !success) {
+      try {
+        const chatModel = getNextChatModel(); 
+        if (!chatModel) return message.reply("Admin mamba, API keys add panave illa pola! Check the Railway Variables da! 😭");
+
+        const result = await chatModel.generateContent(finalPrompt);
+        finalResponseText = result.response.text();
+        success = true; // Loop breaks here if successful
+      } catch (e) {
+        if (e.status === 429 || (e.message && e.message.includes('429'))) {
+          console.log(`[AI Error] Slot ${currentKeyIndex + 1} is out of limit. Auto-switching to next slot...`);
+          attempts++;
+        } else {
+          console.error(e);
+          return message.reply("AI konjam confuse aayiduchu blood. Vera ethachum technical issue! 😵‍💫");
         }
-      });
-      historyText += "--- END HISTORY ---\n\n";
-      const finalPrompt = `${historyText}Now, reply to ${message.author.username}'s latest message.`;
-
-      const result = await chatModel.generateContent(finalPrompt);
-      let text = result.response.text();
-      return message.reply(text.length > 2000 ? text.substring(0, 1990) + "..." : text);
-    } catch (e) {
-      console.error(e);
-      return message.reply("AI konjam confuse aayiduchu blood (Oruvela indha key um limit aayiduchoo?). Konja neram kazhuithu vaa! 😵‍💫");
+      }
     }
+
+    // If it tried all keys and still failed
+    if (!success) {
+      return message.reply("Dei mamba, ellam API keys um limit gaali da! 💀 Mothama sethutuchu. Nalaiku thaan ini pesum, illana puthu Gmail account la irundhu key add pannu!");
+    }
+
+    return message.reply(finalResponseText.length > 2000 ? finalResponseText.substring(0, 1990) + "..." : finalResponseText);
   }
 });
 
