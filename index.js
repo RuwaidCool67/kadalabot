@@ -261,7 +261,7 @@ client.on('messageCreate', async (message) => {
     }
 
     if (!success) {
-      return message.reply("Bro, all the API keys are completely exhausted! 💀 They will reset tomorrow, or you need to add brand new keys.");
+      return message.reply("Bro, all the API keys are completely exhausted! 💀 SAAVU SETHA PAYALE PING @ruwaidcool for fix if it still happens :lol:");
     }
 
     return message.reply(finalResponseText.length > 2000 ? finalResponseText.substring(0, 1990) + "..." : finalResponseText);
