@@ -6,10 +6,10 @@ const fs = require('fs');
 
 // ================= KEEP ALIVE =================
 const app = express();
-app.get("/", (req, res) => res.send("Kadala Watchman is Online, Chatting, and using Cache-Busted Keys! 🔑🔥"));
+app.get("/", (req, res) => res.send("Kadala Watchman is Online with AFK Ping Defender! 🔑🔥"));
 app.listen(process.env.PORT || 3000);
 
-// ================= AI SETUP (AUTO-FAILOVER ROTATION) =================
+// ================= AI SETUP =================
 const systemInstruction = `
 You are 'Kadala Watchman', a peak GenZ Tamil guy in a Discord server.
 - Language: Strictly Tanglish (Mix of Tamil and English).
@@ -36,9 +36,6 @@ function getNextChatModel() {
   
   currentKeyIndex = (currentKeyIndex + 1) % geminiKeys.length; 
   const keyToUse = geminiKeys[currentKeyIndex];
-  
-  console.log(`[AI Status] Trying Slot: ${currentKeyIndex + 1}`);
-  
   const genAI = new GoogleGenerativeAI(keyToUse);
   return genAI.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction });
 }
@@ -55,33 +52,27 @@ const client = new Client({
 
 // ================= THE BLACK BOX LOGGER 🕵️‍♂️ =================
 const logFile = './kadala-crash.log';
-
 function spitLog(title, error) {
   const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
   const errorDetails = error?.stack || error?.message || JSON.stringify(error) || "Unknown Error";
-  
-  const formattedLog = `\n=========================================
-🚨 [CRASH REPORT - ${timestamp}]
-⚠️ TYPE: ${title}
------------------------------------------
-${errorDetails}
-=========================================\n`;
-
+  const formattedLog = `\n=========================================\n🚨 [CRASH REPORT - ${timestamp}]\n⚠️ TYPE: ${title}\n-----------------------------------------\n${errorDetails}\n=========================================\n`;
   console.error(formattedLog);
-  try { fs.appendFileSync(logFile, formattedLog); } catch (fsErr) { console.error("Bro, couldn't write log!", fsErr); }
+  try { fs.appendFileSync(logFile, formattedLog); } catch (e) {}
 }
 
-process.on('unhandledRejection', (reason) => spitLog('UNHANDLED PROMISE REJECTION (Silent Crash)', reason));
-process.on('uncaughtException', (err) => spitLog('FATAL UNCAUGHT EXCEPTION (Bot Died)', err));
+process.on('unhandledRejection', (reason) => spitLog('UNHANDLED PROMISE REJECTION', reason));
+process.on('uncaughtException', (err) => spitLog('FATAL UNCAUGHT EXCEPTION', err));
 client.on('error', (err) => spitLog('DISCORD CLIENT ERROR', err));
-client.on('disconnect', () => spitLog('DISCORD DISCONNECTED', 'Lost connection to Gateway.'));
-client.on('shardError', error => spitLog('WEBSOCKET SHARD ERROR', error));
 
-// ================= UTILITIES, AFK & RATE LIMITER =================
-const processedMessages = new Set();
+// ================= DATABASES (AFK & STATS) =================
 const FILE = './afk.json';
+const STATS_FILE = './afkStats.json'; 
+
 let afkUsers = fs.existsSync(FILE) ? JSON.parse(fs.readFileSync(FILE)) : {};
+let afkStats = fs.existsSync(STATS_FILE) ? JSON.parse(fs.readFileSync(STATS_FILE)) : {};
+
 const saveAFK = () => fs.writeFileSync(FILE, JSON.stringify(afkUsers, null, 2));
+const saveStats = () => fs.writeFileSync(STATS_FILE, JSON.stringify(afkStats, null, 2));
 
 const formatTime = (ms) => {
   const sec = Math.floor(ms / 1000) % 60;
@@ -90,82 +81,104 @@ const formatTime = (ms) => {
   return hr > 0 ? `${hr}h ${min}m ${sec}s` : `${min}m ${sec}s`;
 };
 
-// Rate Limiter System
+// ================= RATE LIMITER =================
 const aiUsage = {}; 
-
 function checkRateLimit(userId) {
   const now = Date.now();
   if (!aiUsage[userId]) aiUsage[userId] = { history: [], blockedUntil: 0 };
   const user = aiUsage[userId];
 
   if (user.blockedUntil > now) return { allowed: false, reason: 'timeout', timeLeft: user.blockedUntil - now };
-
   user.history = user.history.filter(t => now - t < 10 * 60 * 1000);
-
-  if (user.history.length > 0) {
-    const lastTime = user.history[user.history.length - 1];
-    if (now - lastTime < 10000) return { allowed: false, reason: 'cooldown', timeLeft: 10000 - (now - lastTime) };
+  if (user.history.length > 0 && (now - user.history[user.history.length - 1] < 10000)) {
+    return { allowed: false, reason: 'cooldown', timeLeft: 10000 - (now - user.history[user.history.length - 1]) };
   }
-
   if (user.history.length >= 5) {
     user.blockedUntil = now + 10 * 60 * 1000; 
     return { allowed: false, reason: 'timeout', timeLeft: 10 * 60 * 1000 };
   }
-
   user.history.push(now);
   return { allowed: true };
 }
 
-const funFacts = ["Octopus has 3 hearts", "Honey never spoils", "Bananas are berries", "Sharks older than trees", "Space smells like metal", "Sun is white actually", "Rats laugh", "Sharks never stop swimming"];
-
 // ================= EVENTS =================
 client.once('ready', () => {
-  const keysCount = getAvailableKeys().length;
-  console.log(`Verkadala is Fully Operational 🔥 | Loaded ${keysCount} API Keys.`);
-  
-  client.user.setPresence({
-    activities: [{ name: `Server Chat 👀`, type: ActivityType.Watching }],
-    status: "online"
-  });
-
-  setInterval(() => {
-    client.guilds.cache.forEach(guild => {
-      const channel = guild.channels.cache.find(c => c.isTextBased() && c.name.includes('general')) || guild.systemChannel || guild.channels.cache.find(c => c.isTextBased() && c.permissionsFor(guild.members.me).has('SendMessages'));
-      if (channel) {
-        const fact = funFacts[Math.floor(Math.random() * funFacts.length)];
-        channel.send(`🧠 **Fun Fact:** ${fact}`);
-      }
-    });
-  }, 10 * 60 * 1000); 
+  console.log(`Verkadala is Fully Operational 🔥 | Loaded ${getAvailableKeys().length} API Keys.`);
+  client.user.setPresence({ activities: [{ name: `Server Chat 👀`, type: ActivityType.Watching }], status: "online" });
 });
 
 // ================= MAIN MESSAGE HANDLER =================
 client.on('messageCreate', async (message) => {
-  if (processedMessages.has(message.id) || message.author.bot) return;
-  processedMessages.add(message.id);
-  setTimeout(() => processedMessages.delete(message.id), 5000);
-
+  if (message.author.bot) return;
   const content = message.content.toLowerCase();
   const userId = message.author.id;
 
-  // --- 1. DEBUG COMMAND ---
-  if (content === 'kadala debug keys') {
-    const keys = getAvailableKeys();
-    if (keys.length === 0) return message.reply("Bro, I see ZERO keys. Railway variables `API_KEY_1`, `API_KEY_2`, etc. are empty. 💀");
-    
-    let debugMsg = `**Debug Info:**\nI found **${keys.length}** API keys loaded in my system.\n`;
-    keys.forEach((k, i) => {
-      debugMsg += `Slot ${i + 1}: Starts with \`${k.substring(0, 6)}...\`\n`; 
+  // --- 1. NEW: THE AFK PING DEFENDER 🛡️ ---
+  if (message.mentions.users.size > 0) {
+    message.mentions.users.forEach(user => {
+      if (afkUsers[user.id]) {
+        const reason = afkUsers[user.id].reason || "Therila da, ethuko poirukan!";
+        const timeAway = Date.now() - afkUsers[user.id].time;
+        message.reply(`Dei mamba, **${user.username}** ippo AFK la irukkan! 😴\n**Reason:** ${reason}\n*(Avan poyi ${formatTime(timeAway)} aaguthu, avan varumbothu thaan reply pannuvan. Wait pannu!)*`);
+      }
     });
-    return message.reply(debugMsg);
   }
 
-  // --- 2. AFK LOGIC ---
+  // --- 2. THE BUNKER (Can I Bunk?) ---
+  const bunkMatch = content.match(/^(kadala|kadalai)\s+bunk\s+(\d+)\s+(\d+)/i);
+  if (bunkMatch) {
+    const totalClasses = parseInt(bunkMatch[2]);
+    const attendedClasses = parseInt(bunkMatch[3]);
+
+    if (attendedClasses > totalClasses) {
+      return message.reply("Dei gubeer! Total classes vida nee eppadi da adhigama attend panna mudiyum? 💀 Check the numbers (Format: `kadala bunk [Total_Classes] [Attended]`).");
+    }
+
+    const percentage = (attendedClasses / totalClasses) * 100;
+    let replyText = `📊 **Bunk Math:** Un percentage ippo **${percentage.toFixed(2)}%**.\n\n`;
+
+    if (percentage >= 75) {
+      const bunksAllowed = Math.floor((attendedClasses / 0.75) - totalClasses);
+      if (bunksAllowed > 0) {
+        replyText += `😎 Thalaivaa! Nee safe zone la irukka. Innum **${bunksAllowed} classes** thairiyama bunk adikkalam! Vibe start pannu! 🛌🎮`;
+      } else {
+        replyText += `⚠️ Border la thongitu irukka mamba! Inimey bunk adicha maattikuva. College ku kelaambu! 🚶‍♂️🎒`;
+      }
+    } else {
+      const needed = Math.ceil(((0.75 * totalClasses) - attendedClasses) / 0.25);
+      replyText += `💀 Danger Zone da mamba! 75% thoda innum **${needed} classes** continuously poganum. Vibe aagatha, poi padi! 🏃‍♂️📚`;
+    }
+    return message.reply(replyText);
+  }
+
+  // --- 3. AFK LEADERBOARD ---
+  if (/^(kadala|kadalai)\s+(afk leaderboard|leaderboard)/i.test(content)) {
+    const sortedStats = Object.entries(afkStats).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    
+    if (sortedStats.length === 0) return message.reply("Innum evanum AFK pogala da mamba! Server active ah thaan iruku. 💀");
+
+    let lbString = "🏆 **THOONGU MOONJI LEADERBOARD (Top 5 AFKers)** 🏆\n\n";
+    for (let i = 0; i < sortedStats.length; i++) {
+      try {
+        const userObj = await client.users.fetch(sortedStats[i][0]);
+        lbString += `**${i + 1}. ${userObj.username}** ➔ ⏱️ ${formatTime(sortedStats[i][1])}\n`;
+      } catch (e) {
+        lbString += `**${i + 1}. Unknown Mamba** ➔ ⏱️ ${formatTime(sortedStats[i][1])}\n`;
+      }
+    }
+    return message.reply(lbString);
+  }
+
+  // --- 4. AFK LOGIC (Set & Return) ---
   if (afkUsers[userId]) {
     const timeAway = Date.now() - afkUsers[userId].time;
     const reasonText = afkUsers[userId].reason ? `(Reason: ${afkUsers[userId].reason})` : "";
     delete afkUsers[userId];
     saveAFK();
+
+    afkStats[userId] = (afkStats[userId] || 0) + timeAway;
+    saveStats();
+
     return message.reply(`dei comeback ah 😏 **${formatTime(timeAway)}** wait panna vachitiye mamba! ${reasonText}`);
   }
 
@@ -177,23 +190,12 @@ client.on('messageCreate', async (message) => {
     return message.reply(`seri da AFK 😴 **Reason:** ${reason} | safe ah poitu vaa mamba!`);
   }
 
-  // --- 3. VOICE CHANNEL COMMANDS ---
+  // --- 5. VC JOIN / LEAVE ---
   if (/^(kadala|kadalai)\s+(vc join|join vc)/i.test(content)) {
     const vc = message.member.voice.channel;
     if (!vc) return message.reply("Bro, you need to join a Voice Channel first! 😭");
-    try {
-      joinVoiceChannel({ 
-          channelId: vc.id, 
-          guildId: vc.guild.id, 
-          adapterCreator: vc.guild.voiceAdapterCreator, 
-          selfDeaf: false, 
-          selfMute: false 
-      });
-      return message.reply("Joined the VC, bro! 😎");
-    } catch (e) {
-      spitLog("VC JOIN FAILED", e);
-      return message.reply("Bro, I couldn't join the VC. Check the logs! 💀");
-    }
+    joinVoiceChannel({ channelId: vc.id, guildId: vc.guild.id, adapterCreator: vc.guild.voiceAdapterCreator, selfDeaf: false, selfMute: false });
+    return message.reply("Joined the VC, bro! 😎");
   }
 
   if (/^(kadala|kadalai)\s+(vc leave|leave vc)/i.test(content)) {
@@ -203,9 +205,9 @@ client.on('messageCreate', async (message) => {
     return message.reply("Left the VC! 🚶‍♂️");
   }
 
-  // --- 4. AI CHAT LOGIC ---
+  // --- 6. AI CHAT LOGIC ---
   const isReplyToBot = message.reference && message.mentions.repliedUser?.id === client.user.id;
-  const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(?!afk|vc join|join vc|vc leave|leave vc|debug)(.*)/i);
+  const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(?!afk|vc join|join vc|vc leave|leave vc|bunk|leaderboard|debug)(.*)/i);
 
   if (aiPrefixMatch || isReplyToBot) {
     let userPrompt = aiPrefixMatch ? aiPrefixMatch[2].trim() : message.content;
@@ -213,57 +215,36 @@ client.on('messageCreate', async (message) => {
 
     const rl = checkRateLimit(userId);
     if (!rl.allowed) {
-      if (rl.reason === 'cooldown') {
-        const secs = Math.ceil(rl.timeLeft / 1000);
-        return message.reply(`Bro, chill for a sec! 🛑 Wait **${secs} seconds** before you talk to me again.`);
-      } else if (rl.reason === 'timeout') {
-        const mins = Math.ceil(rl.timeLeft / 60000);
-        return message.reply(`You hit the 5-message limit, bro! 💀 To save API quota, you're in timeout for **${mins} minutes**.`);
-      }
+      if (rl.reason === 'cooldown') return message.reply(`Bro, chill for a sec! 🛑 Wait **${Math.ceil(rl.timeLeft / 1000)} seconds** before you talk to me again.`);
+      if (rl.reason === 'timeout') return message.reply(`You hit the 5-message limit, bro! 💀 You're in timeout for **${Math.ceil(rl.timeLeft / 60000)} minutes**.`);
     }
 
     await message.channel.sendTyping();
 
-    // AUTO-FAILOVER LOGIC
     const totalKeys = getAvailableKeys().length;
-    let attempts = 0;
-    let success = false;
-    let finalResponseText = "";
+    let attempts = 0, success = false, finalResponseText = "";
 
     const fetchedMessages = await message.channel.messages.fetch({ limit: 6 });
     let historyText = "--- RECENT CHAT HISTORY ---\n";
     fetchedMessages.reverse().forEach(msg => {
-      if (msg.content) {
-        const authorName = msg.author.id === client.user.id ? "Kadala Watchman" : msg.author.username;
-        historyText += `${authorName}: ${msg.content}\n`;
-      }
+      if (msg.content) historyText += `${msg.author.id === client.user.id ? "Kadala Watchman" : msg.author.username}: ${msg.content}\n`;
     });
-    historyText += "--- END HISTORY ---\n\n";
-    const finalPrompt = `${historyText}Now, reply to ${message.author.username}'s latest message.`;
+    const finalPrompt = `${historyText}\nNow, reply to ${message.author.username}'s latest message.`;
 
     while (attempts < totalKeys && !success) {
       try {
         const chatModel = getNextChatModel(); 
-        if (!chatModel) return message.reply("Admin, you haven't added `API_KEY_1` to Railway properly! 😭");
-
+        if (!chatModel) return message.reply("Admin, no API keys found in Railway variables! 😭");
         const result = await chatModel.generateContent(finalPrompt);
         finalResponseText = result.response.text();
         success = true; 
       } catch (e) {
-        if (e.status === 429 || (e.message && e.message.includes('429'))) {
-          console.log(`[AI Error] Slot ${currentKeyIndex + 1} is out of limit. Auto-switching to next slot...`);
-          attempts++;
-        } else {
-          spitLog("AI GENERATION ERROR", e);
-          return message.reply("AI is a bit confused right now. Check the crash log! 😵‍💫");
-        }
+        if (e.status === 429 || (e.message && e.message.includes('429'))) attempts++;
+        else { spitLog("AI ERROR", e); return message.reply("AI is confused right now! 😵‍💫"); }
       }
     }
 
-    if (!success) {
-      return message.reply("Bro, all the API keys are completely exhausted! 💀 SAAVU SETHA PAYALE PING @ruwaidcool for fix if it still happens :lol:");
-    }
-
+    if (!success) return message.reply("Bro, all the API keys are exhausted! 💀 They reset tomorrow.");
     return message.reply(finalResponseText.length > 2000 ? finalResponseText.substring(0, 1990) + "..." : finalResponseText);
   }
 });
