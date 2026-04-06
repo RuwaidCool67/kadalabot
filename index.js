@@ -1,11 +1,12 @@
 const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
+const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const { GoogleGenerativeAI } = require("@google/generative-ai"); 
 const express = require('express');
 const fs = require('fs');
 
 // ================= KEEP ALIVE =================
 const app = express();
-app.get("/", (req, res) => res.send("Kadala Watchman is Online, Chatting, and Auto-Rotating Keys! 🔑🔥"));
+app.get("/", (req, res) => res.send("Kadala Watchman is Online, Chatting, and using Cache-Busted Keys! 🔑🔥"));
 app.listen(process.env.PORT || 3000);
 
 // ================= AI SETUP (AUTO-FAILOVER ROTATION) =================
@@ -14,7 +15,7 @@ You are 'Kadala Watchman', a peak GenZ Tamil guy in a Discord server.
 - Language: Strictly Tanglish (Mix of Tamil and English).
 - Style: Use GenZ slang like 'vibe', 'scene-u', 'mamba', 'lit', 'clutch', 'gubeer', 'pangu', 'maams', 'blood', 'share-u'.
 - Tone: Be funny, sarcastic (nakkaal), and friendly.
-- Address user as: 'da', 'mamba', 'pangu', or 'pulla'.
+- Address user as: 'da', 'maapla', 'pangu', or 'pulla' , 'nanba'.
 - Context awareness: You will be provided with the recent chat history. Use it to understand the flow, but only reply to the latest message.
 - Rules: Keep it short (1-3 sentences max). Don't be robotic. Use emojis like 💀, 🔥, 😂, 🫡.
 `;
@@ -22,10 +23,11 @@ You are 'Kadala Watchman', a peak GenZ Tamil guy in a Discord server.
 let currentKeyIndex = -1;
 
 function getAvailableKeys() {
+  // CHANGED: Now looking for the new variable names to bust the cache!
   return [
-    process.env.GEMINI_KEY_1,
-    process.env.GEMINI_KEY_2,
-    process.env.GEMINI_KEY_3
+    process.env.API_KEY_1,
+    process.env.API_KEY_2,
+    process.env.API_KEY_3
   ].filter(key => key !== undefined && key.trim() !== '');
 }
 
@@ -47,7 +49,8 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildVoiceStates
   ]
 });
 
@@ -64,7 +67,7 @@ const formatTime = (ms) => {
   return hr > 0 ? `${hr}h ${min}m ${sec}s` : `${min}m ${sec}s`;
 };
 
-// 🛑 Rate Limiter System for AI
+// Rate Limiter System
 const aiUsage = {}; 
 
 function checkRateLimit(userId) {
@@ -122,7 +125,20 @@ client.on('messageCreate', async (message) => {
   const content = message.content.toLowerCase();
   const userId = message.author.id;
 
-  // 1. AFK Logic
+  // --- 1. DEBUG COMMAND (To verify your keys) ---
+  if (content === 'kadala debug keys') {
+    const keys = getAvailableKeys();
+    if (keys.length === 0) return message.reply("Bro, I see ZERO keys. Railway is completely empty. 💀");
+    
+    let debugMsg = `**Debug Info:**\nI found **${keys.length}** API keys loaded in my system.\n`;
+    keys.forEach((k, i) => {
+      // Shows only the first 6 characters to prove it's the new key, keeping the rest safe
+      debugMsg += `Slot ${i + 1}: Starts with \`${k.substring(0, 6)}...\`\n`; 
+    });
+    return message.reply(debugMsg);
+  }
+
+  // --- 2. AFK LOGIC ---
   if (afkUsers[userId]) {
     const timeAway = Date.now() - afkUsers[userId].time;
     const reasonText = afkUsers[userId].reason ? `(Reason: ${afkUsers[userId].reason})` : "";
@@ -139,28 +155,50 @@ client.on('messageCreate', async (message) => {
     return message.reply(`seri da AFK 😴 **Reason:** ${reason} | safe ah poitu vaa mamba!`);
   }
 
-  // ================= AI CHAT LOGIC =================
+  // --- 3. VOICE CHANNEL COMMANDS ---
+  if (/^(kadala|kadalai)\s+(vc join|join vc)/i.test(content)) {
+    const vc = message.member.voice.channel;
+    if (!vc) return message.reply("Bro, you need to join a Voice Channel first! 😭");
+    joinVoiceChannel({ 
+        channelId: vc.id, 
+        guildId: vc.guild.id, 
+        adapterCreator: vc.guild.voiceAdapterCreator, 
+        selfDeaf: false, 
+        selfMute: false 
+    });
+    return message.reply("Joined the VC, bro! 😎");
+  }
+
+  if (/^(kadala|kadalai)\s+(vc leave|leave vc)/i.test(content)) {
+    const conn = getVoiceConnection(message.guild.id);
+    if (!conn) return message.reply("I'm not even in a VC, bro! 💀");
+    conn.destroy();
+    return message.reply("Left the VC! 🚶‍♂️");
+  }
+
+  // --- 4. AI CHAT LOGIC ---
   const isReplyToBot = message.reference && message.mentions.repliedUser?.id === client.user.id;
-  const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(?!afk)(.*)/i);
+  // Adjusted regex to ensure it ignores 'vc join', 'vc leave', and 'debug'
+  const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(?!afk|vc join|join vc|vc leave|leave vc|debug)(.*)/i);
 
   if (aiPrefixMatch || isReplyToBot) {
     let userPrompt = aiPrefixMatch ? aiPrefixMatch[2].trim() : message.content;
-    if (!userPrompt) return message.reply("Enna pangu, blank ah message anupura? Ethachum kelu! 💀");
+    if (!userPrompt) return message.reply("Bro, why are you sending a blank message? Ask something! 💀");
 
     const rl = checkRateLimit(userId);
     if (!rl.allowed) {
       if (rl.reason === 'cooldown') {
         const secs = Math.ceil(rl.timeLeft / 1000);
-        return message.reply(`Dei mamba, moochu vaanga time kudu da! 🛑 Wait for **${secs} seconds** before you talk to me again.`);
+        return message.reply(`Bro, chill for a sec! 🛑 Wait **${secs} seconds** before you talk to me again.`);
       } else if (rl.reason === 'timeout') {
         const mins = Math.ceil(rl.timeLeft / 60000);
-        return message.reply(`Dei 5 times mela pesi over-ah usura vangita! 💀 API limit save pannanum. Nee oru **${mins} minutes** jail la iru.`);
+        return message.reply(`You hit the 5-message limit, bro! 💀 To save API quota, you're in timeout for **${mins} minutes**.`);
       }
     }
 
     await message.channel.sendTyping();
 
-    // 🛑 AUTO-FAILOVER LOGIC 🛑
+    // AUTO-FAILOVER LOGIC
     const totalKeys = getAvailableKeys().length;
     let attempts = 0;
     let success = false;
@@ -180,25 +218,24 @@ client.on('messageCreate', async (message) => {
     while (attempts < totalKeys && !success) {
       try {
         const chatModel = getNextChatModel(); 
-        if (!chatModel) return message.reply("Admin mamba, API keys add panave illa pola! Check the Railway Variables da! 😭");
+        if (!chatModel) return message.reply("Admin, you haven't added the API keys to Railway properly! 😭");
 
         const result = await chatModel.generateContent(finalPrompt);
         finalResponseText = result.response.text();
-        success = true; // Loop breaks here if successful
+        success = true; 
       } catch (e) {
         if (e.status === 429 || (e.message && e.message.includes('429'))) {
           console.log(`[AI Error] Slot ${currentKeyIndex + 1} is out of limit. Auto-switching to next slot...`);
           attempts++;
         } else {
           console.error(e);
-          return message.reply("AI konjam confuse aayiduchu blood. Vera ethachum technical issue! 😵‍💫");
+          return message.reply("AI is a bit confused right now. Some technical issue! 😵‍💫");
         }
       }
     }
 
-    // If it tried all keys and still failed
     if (!success) {
-      return message.reply("Dei mamba, ellam API keys um limit gaali da! 💀 Mothama sethutuchu. Nalaiku thaan ini pesum, illana puthu Gmail account la irundhu key add pannu!");
+      return message.reply("Bro, all the API keys are completely exhausted! 💀 They will reset tomorrow, or you need to add brand new keys from different accounts.");
     }
 
     return message.reply(finalResponseText.length > 2000 ? finalResponseText.substring(0, 1990) + "..." : finalResponseText);
