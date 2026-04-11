@@ -8,9 +8,9 @@ const PORT = process.env.PORT || 3000;
 const SITE_URL = "https://kadalabot.up.railway.app/";
 
 // ================= STORAGE =================
-const STATS_FILE = './userStats.json';     // Yapping
-const COUNT_STATS_FILE = './countLB.json'; // Counting Leaderboard
-const GAME_FILE = './counting.json';       // Active Game State
+const STATS_FILE = './userStats.json';
+const COUNT_STATS_FILE = './countLB.json';
+const GAME_FILE = './counting.json';
 const AFK_FILE = './afk.json';
 
 const loadJSON = (file, fallback) => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file)) : fallback;
@@ -28,12 +28,17 @@ const saveAll = () => {
     fs.writeFileSync(AFK_FILE, JSON.stringify(afkUsers, null, 2));
 };
 
-// ================= MASTER SYNC =================
+const formatTime = (ms) => {
+    const mins = Math.floor(ms / 60000);
+    const hrs = Math.floor(mins / 60);
+    return hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins}m`;
+};
+
+// ================= MASTER SYNC (SILENT) =================
 const updateMasterCache = async () => {
     try {
         const guild = client.guilds.cache.first();
         if (!guild) return;
-
         const m = await guild.members.fetch({ withPresences: true });
         const onlineMem = m.filter(mem => mem.presence && mem.presence.status !== 'offline' && !mem.user.bot);
         
@@ -53,11 +58,11 @@ const updateMasterCache = async () => {
         });
 
         cachedResponse = { 
-            totalMembers: guild.memberCount,
-            yappers, counters, online: { count: onlineMem.size, members: onlineMem.map(mem => ({ username: mem.user.username, avatar: mem.user.displayAvatarURL() })) },
+            totalMembers: guild.memberCount, yappers, counters, 
+            online: { count: onlineMem.size, members: onlineMem.map(mem => ({ username: mem.user.username, avatar: mem.user.displayAvatarURL() })) },
             afk, system: { ping: client.ws.ping + "ms", uptime: Math.floor(process.uptime() / 60) + "m" }
         };
-    } catch (e) { console.error("Sync error"); }
+    } catch (e) { console.log("Silent sync failed"); }
 };
 
 // ================= API =================
@@ -66,7 +71,7 @@ app.get("/api/all", (req, res) => res.json(cachedResponse || {}));
 
 app.listen(PORT, () => console.log(`Engine live on ${PORT}`));
 
-// ================= BOT =================
+// ================= BOT LOGIC =================
 const client = new Client({ intents: [3276799] });
 
 client.on('ready', () => { updateMasterCache(); setInterval(updateMasterCache, 30000); });
@@ -76,42 +81,45 @@ client.on('messageCreate', async (message) => {
     const userId = message.author.id;
     const content = message.content.toLowerCase();
 
-    // 1. YAPPER STATS
+    // Stats
     if (!userStats[userId]) userStats[userId] = { username: message.author.username, count: 0 };
     userStats[userId].count++;
     userStats[userId].username = message.author.username;
 
-    // 2. COUNTING GAME INTEGRATION
+    // AFK RETURN (Time + Reason fix)
+    if (afkUsers[userId]) { 
+        const duration = formatTime(Date.now() - afkUsers[userId].time);
+        const oldReason = afkUsers[userId].reason;
+        delete afkUsers[userId]; 
+        saveAll(); 
+        updateMasterCache();
+        return message.reply(`Welcome back mamba! 🤝\nNee **${duration}** ah thoongitu iruntha. \n**Reason:** ${oldReason}\n\n*uk u can also see this and more about tas in this server also in ${SITE_URL}*`); 
+    }
+
+    // AFK SET (Silent sync fix)
+    if (content.startsWith('kadala afk')) {
+        const r = message.content.split(/afk/i)[1]?.trim() || "No reason";
+        afkUsers[userId] = { time: Date.now(), reason: r };
+        saveAll();
+        updateMasterCache();
+        return message.reply(`AFK set mamba! 😴\n\n*uk u can also see this and more about tas in this server also in ${SITE_URL}*`);
+    }
+
+    // Counting
     if (message.channel.name.includes('count')) {
         const num = parseInt(content);
         if (!isNaN(num)) {
             if (num !== gameData.current + 1 || userId === gameData.lastUser) {
-                message.react('❌'); gameData.current = 0; gameData.lastUser = null;
+                gameData.current = 0; gameData.lastUser = null;
             } else {
-                message.react('✅'); gameData.current = num; gameData.lastUser = userId;
+                gameData.current = num; gameData.lastUser = userId;
                 if (!countLB[userId]) countLB[userId] = { username: message.author.username, points: 0 };
                 countLB[userId].points++;
             }
+            saveAll();
+            updateMasterCache();
         }
     }
-
-    // 3. AFK COMMANDS
-    if (afkUsers[userId]) { delete afkUsers[userId]; message.reply("Welcome back! Website updated."); }
-
-    if (content.startsWith('kadala afk')) {
-        const r = message.content.split('afk')[1]?.trim() || "Ethuko poirukan";
-        afkUsers[userId] = { time: Date.now(), reason: r };
-        message.reply(`AFK set mamba! Reason: ${r}\n*Tip: View live at ${SITE_URL}*`);
-    }
-
-    // 4. DISCORD LEADERBOARDS
-    if (content === 'kadala leaderboard') {
-        const topYappers = Object.values(userStats).sort((a,b)=>b.count-a.count).slice(0,5).map((u,i)=>`${i+1}. ${u.username} (${u.count} msgs)`).join('\n');
-        return message.reply(`🏆 **TOP YAPPERS**\n${topYappers}\n\n*Full stats: ${SITE_URL}*`);
-    }
-
-    saveAll();
-    updateMasterCache();
 });
 
 client.login(process.env.TOKEN);
