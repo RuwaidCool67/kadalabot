@@ -1,7 +1,6 @@
 {
   "name": "verkadala-hub",
-  "version": "13.0.0",
-  "description": "Unhinged Discord Bot and Dashboard by ruwaidcool",
+  "version": "14.0.0",
   "main": "index.js",
   "scripts": { "start": "node index.js" },
   "dependencies": {
