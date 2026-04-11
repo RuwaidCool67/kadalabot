@@ -3,68 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verkadala Hub | Glass Edition</title>
+    <title>Verkadala Hub | v16.0</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         :root { --bg: #020617; --glass: rgba(15, 23, 42, 0.6); --accent: #6366f1; --border: rgba(255,255,255,0.1); }
         html { scroll-behavior: smooth; }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
-        
-        body { 
-            background: var(--bg); color:white; min-height:100vh; 
-            display: flex; flex-direction: column; overflow-x: hidden;
-        }
+        body { background: var(--bg); color:white; min-height:100vh; display: flex; flex-direction: column; overflow-x: hidden; }
 
-        /* BLURRY BACKGROUND ANIMATIONS */
-        .blob {
-            position: fixed; width: 400px; height: 400px; background: rgba(99, 102, 241, 0.15);
-            filter: blur(80px); border-radius: 50%; z-index: -1; animation: move 20s infinite alternate;
-        }
-        @keyframes move { from { transform: translate(-10%, -10%); } to { transform: translate(100%, 80%); } }
+        .blob { position: fixed; width: 500px; height: 500px; background: rgba(99, 102, 241, 0.1); filter: blur(100px); border-radius: 50%; z-index: -1; animation: move 25s infinite alternate; }
+        @keyframes move { from { transform: translate(-20%, -20%); } to { transform: translate(120%, 90%); } }
 
-        /* SPLASH */
         #splash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #020617; display: flex; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.8s ease; }
         .splash-text { font-size: 1.1rem; font-weight: 800; letter-spacing: 4px; animation: p 1s infinite alternate; }
         @keyframes p { from { opacity: 0.4; } to { opacity: 1; } }
 
-        /* --- ROUNDED GLASS NAV BAR --- */
         nav { 
-            width: 90%; max-width: 1100px;
-            background: var(--glass); 
-            backdrop-filter: blur(20px); 
-            border: 1px solid var(--border);
-            padding: 15px 40px; 
-            display: flex; justify-content: space-between; align-items: center; 
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 1000; border-radius: 100px;
+            width: 90%; max-width: 1100px; background: var(--glass); backdrop-filter: blur(25px); 
+            border: 1px solid var(--border); padding: 15px 35px; display: flex; 
+            justify-content: space-between; align-items: center; position: fixed; 
+            top: 25px; left: 50%; transform: translateX(-50%); z-index: 1000; border-radius: 100px;
         }
-        .logo { color: #ffffff; font-weight: 800; font-size: 1.3rem; text-decoration: none; letter-spacing: -1px; }
-        .links { display: flex; gap: 30px; list-style: none; }
-        .links a { color: #ffffff; text-decoration: none; font-size: 0.85rem; font-weight: 700; opacity: 0.7; transition: 0.3s; }
+        .logo { color: #ffffff; font-weight: 800; font-size: 1.2rem; text-decoration: none; }
+        .links { display: flex; gap: 25px; list-style: none; }
+        .links a { color: #ffffff; text-decoration: none; font-size: 0.8rem; font-weight: 800; opacity: 0.7; transition: 0.3s; }
         .links a:hover { opacity: 1; color: var(--accent); }
-        .live-dot { color: #22c55e; font-weight: 800; font-size: 0.8rem; }
 
-        /* CONTENT */
-        .main { padding: 120px 6% 40px; max-width: 1500px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr 320px; gap: 30px; width: 100%; flex-grow: 1; }
-        .card { 
-            background: var(--glass); backdrop-filter: blur(30px); border: 1px solid var(--border); 
-            border-radius: 32px; padding: 25px; margin-bottom: 30px; 
-            transition: 0.3s;
-        }
-        .card:hover { border-color: rgba(99, 102, 241, 0.4); transform: translateY(-5px); }
+        .main { padding: 130px 6% 40px; max-width: 1500px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr 320px; gap: 25px; width: 100%; flex-grow: 1; }
+        .card { background: var(--glass); backdrop-filter: blur(40px); border: 1px solid var(--border); border-radius: 30px; padding: 25px; margin-bottom: 25px; }
         
-        .rank-item { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 20px; }
-        .pfp { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--accent); }
-        .timer { font-size: 0.7rem; font-weight: 800; color: var(--accent); margin-bottom: 10px; text-align: right; }
+        .rank-item { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 20px; transition: 0.3s; }
+        .pfp { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--accent); }
+        .afk-timer { font-size: 0.7rem; font-weight: 800; color: #fbbf24; background: rgba(251, 191, 36, 0.1); padding: 3px 8px; border-radius: 6px; }
 
-        footer { padding: 60px; text-align: center; opacity: 0.5; font-size: 0.85rem; }
-        @media (max-width: 1150px) { .main { grid-template-columns: 1fr; } .links { display: none; } }
+        footer { padding: 50px; text-align: center; opacity: 0.5; font-size: 0.8rem; }
     </style>
 </head>
 <body>
-
     <div class="blob"></div>
-
     <div id="splash">
         <div class="splash-text">POWERED BY RUWAIDCOOL SOFTWARE</div>
     </div>
@@ -75,41 +51,39 @@
             <li><a href="#">DASHBOARD</a></li>
             <li><a href="#system-wall">SYSTEM</a></li>
         </ul>
-        <div class="live-dot">LIVE ●</div>
+        <div style="color: #22c55e; font-size: 0.8rem; font-weight: 900;">LIVE ●</div>
     </nav>
 
     <div class="main">
         <div>
             <div class="card" style="text-align:center">
-                <p style="opacity:0.6; font-size:0.75rem; text-transform:uppercase;">Current Count</p>
-                <h1 id="curr" style="font-size:3.8rem; color:var(--accent); margin:5px 0;">0</h1>
+                <p style="opacity:0.6; font-size:0.75rem; text-transform:uppercase; letter-spacing: 1px;">Total Members</p>
+                <h1 id="total-mem" style="font-size:3.8rem; color:var(--accent); margin:10px 0;">0</h1>
             </div>
             <div class="card">
-                <h3 style="color: var(--accent)">ABOUT</h3>
-                <p style="font-size:0.85rem; margin-top:10px; color:#94a3b8; line-height:1.6;">Unhinged server made by <b>ruwaidcool</b>. 💀🔥</p>
+                <h3 style="color: var(--accent); margin-bottom: 10px;">ABOUT</h3>
+                <p style="font-size:0.8rem; color:#94a3b8; line-height:1.6;">Unhinged server made by <b>ruwaidcool</b>. 💀🔥</p>
             </div>
         </div>
 
         <div>
             <div class="card">
-                <div class="timer">AUTO-UPDATE: <span id="cd">30</span>S</div>
-                <h2 style="font-size: 1.5rem; margin-bottom: 15px;">🏆 TOP YAPPER RANKINGS</h2>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <span style="font-weight:800;">🏆 TOP YAPPER RANKINGS</span>
+                    <span style="font-size:0.65rem; color:var(--accent); font-weight:800;">AUTO-UPDATE: <span id="cd">30</span>S</span>
+                </div>
                 <div id="lb-list"></div>
             </div>
-            <div class="card" id="system-wall">
-                <h2 style="font-size: 1.5rem; margin-bottom: 15px;">⚙️ SYSTEM STATUS</h2>
-                <div id="sys-info"></div>
-            </div>
         </div>
 
         <div>
             <div class="card">
-                <h3 style="color:#22c55e;">ONLINE (<span id="on-count">0</span>)</h3>
-                <div id="on-list" style="margin-top:15px;"></div>
+                <h3 style="color:#22c55e; margin-bottom: 15px;">ONLINE (<span id="on-count">0</span>)</h3>
+                <div id="on-list"></div>
             </div>
             <div class="card">
-                <h3 style="color:#fbbf24;">😴 AFK LEADERBOARD</h3>
-                <div id="afk-list" style="margin-top:15px;"></div>
+                <h3 style="color:#fbbf24; margin-bottom: 15px;">😴 AFK LEADERBOARD</h3>
+                <div id="afk-list"></div>
             </div>
         </div>
     </div>
@@ -117,7 +91,6 @@
     <footer>Made with ❤️ by <b>Ruwaid</b></footer>
 
     <script>
-        // Splash
         setTimeout(() => { 
             const s = document.getElementById('splash'); 
             s.style.opacity = '0'; 
@@ -127,24 +100,30 @@
         let count = 30;
         const cd = document.getElementById('cd');
 
+        function formatTime(since) {
+            const diff = Date.now() - since;
+            const mins = Math.floor(diff / 60000);
+            const hrs = Math.floor(mins / 60);
+            return hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins}m`;
+        }
+
         function render(data) {
             if(!data) return;
-            document.getElementById('curr').innerText = data.counting?.current || 0;
+            // THE FIX: Pointing to totalMembers
+            document.getElementById('total-mem').innerText = data.totalMembers || 0;
             document.getElementById('on-count').innerText = data.online?.count || 0;
-            document.getElementById('lb-list').innerHTML = data.stats?.map(u => `<div class="rank-item"><img src="${u.avatar}" class="pfp"><div><b>${u.username}</b><br><small>${u.count} msgs</small></div></div>`).join('') || '';
-            document.getElementById('on-list').innerHTML = data.online?.members?.map(m => `<div class="rank-item" style="padding:8px;"><img src="${m.avatar}" style="width:25px; border-radius:50%"> ${m.username}</div>`).join('') || '';
             
-            // AFK LEADERBOARD WITH REASON
+            document.getElementById('lb-list').innerHTML = data.stats?.map(u => `<div class="rank-item"><img src="${u.avatar}" class="pfp"><div><b>${u.username}</b><br><small style="opacity:0.6">${u.count} msgs</small></div></div>`).join('');
+            document.getElementById('on-list').innerHTML = data.online?.members?.slice(0, 10).map(m => `<div class="rank-item" style="padding:8px;"><img src="${m.avatar}" style="width:25px; border-radius:50%"> <span>${m.username}</span></div>`).join('');
+            
             document.getElementById('afk-list').innerHTML = data.afk?.map(u => `
                 <div class="rank-item" style="padding:10px; border-left: 3px solid #fbbf24;">
                     <img src="${u.avatar}" style="width:30px; border-radius:50%"> 
                     <div style="overflow:hidden">
-                        <b style="font-size:0.85rem">${u.username}</b><br>
-                        <small style="font-style:italic; opacity:0.8">"${u.reason}"</small>
+                        <b style="font-size:0.8rem">${u.username}</b> <span class="afk-timer">${formatTime(u.since)}</span><br>
+                        <small style="opacity:0.7">"${u.reason}"</small>
                     </div>
-                </div>`).join('') || '<p style="font-size:0.75rem; opacity:0.4; text-align:center">All bloods awake!</p>';
-            
-            document.getElementById('sys-info').innerHTML = `<p style="font-size:0.9rem;">Ping: ${data.system?.ping || '0ms'} | Uptime: ${data.system?.uptime || '0m'} | Status: Online</p>`;
+                </div>`).join('') || '<p style="font-size:0.75rem; opacity:0.4; text-align:center">No one sleeping!</p>';
         }
 
         async function fetchAll() {
