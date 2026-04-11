@@ -6,106 +6,149 @@
     <title>Verkadala Hub | Official</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        :root { --bg: #020617; --glass: rgba(15, 23, 42, 0.75); --accent: #6366f1; --border: rgba(255,255,255,0.1); }
+        :root { --bg: #020617; --glass: rgba(15, 23, 42, 0.85); --accent: #6366f1; --border: rgba(255,255,255,0.12); }
+        html { scroll-behavior: smooth; }
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
-        body { background: var(--bg); color:white; min-height:100vh; display:flex; flex-direction:column; align-items:center; overflow-x:hidden; }
-        #canvas { position:fixed; z-index:-1; top:0; left:0; width:100%; height:100%; }
-
-        nav { width:92%; max-width:1100px; background:var(--glass); backdrop-filter:blur(20px); border:1px solid var(--border); padding:15px 25px; border-radius:24px; margin-top:20px; display:flex; justify-content:space-between; align-items:center; z-index:100; }
-        .nav-links { display: flex; gap: 20px; list-style: none; }
-        .nav-links a { color: #94a3b8; text-decoration: none; font-size: 0.8rem; font-weight: 800; transition: 0.3s; }
+        body { background: var(--bg); color:white; min-height:100vh; display: flex; flex-direction: column; }
         
-        .container { width:92%; max-width:1100px; display:grid; grid-template-columns: 1fr 2fr 1fr; gap:25px; margin-top:30px; z-index:10; }
-        .card { background:var(--glass); backdrop-filter:blur(35px); border:1px solid var(--border); border-radius:30px; padding:25px; height: fit-content; animation: fadeIn 0.8s ease forwards; }
+        /* --- FULL WIDTH WHITE NAV --- */
+        nav { 
+            width: 100%; background: var(--glass); backdrop-filter: blur(30px); 
+            border-bottom: 1px solid var(--border); padding: 20px 6%; 
+            display: flex; justify-content: space-between; align-items: center; 
+            position: sticky; top: 0; z-index: 1000;
+        }
+        .nav-logo { color: #ffffff; font-weight: 800; font-size: 1.4rem; letter-spacing: -1px; }
+        .nav-links { display: flex; gap: 35px; list-style: none; }
+        .nav-links a { color: #ffffff; text-decoration: none; font-size: 0.85rem; font-weight: 800; opacity: 0.7; transition: 0.3s; }
+        .nav-links a:hover { opacity: 1; }
 
-        .rank-item { display:flex; align-items:center; gap:12px; padding:12px; background:rgba(255,255,255,0.03); border-radius:18px; margin-bottom:10px; border:1px solid var(--border); transition: 0.3s; }
-        .pfp { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--border); }
+        .main-content { padding: 40px 6%; width: 100%; max-width: 1500px; margin: 0 auto; }
+        .grid-layout { display: grid; grid-template-columns: 320px 1fr 320px; gap: 30px; }
 
-        .about-text { font-size: 0.85rem; line-height: 1.6; color: #94a3b8; }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .online { background: #22c55e; box-shadow: 0 0 8px #22c55e; } .idle { background: #fbbf24; } .dnd { background: #ef4444; }
+        .card { 
+            background: var(--glass); backdrop-filter: blur(40px); border: 1px solid var(--border); 
+            border-radius: 28px; padding: 28px; height: fit-content; margin-bottom: 30px;
+        }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } .nav-links { display: none; } }
+        .rank-item { display:flex; align-items:center; gap:14px; padding:14px; background:rgba(255,255,255,0.03); border-radius:20px; margin-bottom:12px; border:1px solid var(--border); }
+        .pfp { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border); }
+        
+        .staff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; }
+        .staff-card { text-align: center; padding: 15px; background: rgba(99, 102, 241, 0.05); border: 1px solid var(--accent); border-radius: 20px; }
+        .staff-pfp { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 8px; }
+
+        .sys-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+
+        @media (max-width: 1100px) { .grid-layout { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+
     <nav>
-        <div style="font-weight:800; font-size:1.1rem;">VERKADALA HUB</div>
+        <div class="nav-logo">VERKADALA HUB</div>
         <ul class="nav-links">
             <li><a href="#">DASHBOARD</a></li>
-            <li><a href="#">MODS</a></li>
+            <li><a href="#staff-wall">MODS</a></li>
+            <li><a href="#system-wall">SYSTEM</a></li>
         </ul>
-        <div style="font-size: 0.7rem; font-weight: 800; color: #22c55e;">● LIVE</div>
+        <div style="font-size: 0.75rem; font-weight: 800; color: #22c55e;">● LIVE</div>
     </nav>
 
-    <div class="container">
-        <div style="display:flex; flex-direction:column; gap:20px;">
-            <div class="card" style="text-align:center">
-                <p style="font-size:0.7rem; opacity:0.6;">CURRENT COUNT</p>
-                <h1 id="curr" style="font-size:3rem; color:var(--accent)">0</h1>
+    <div class="main-content">
+        <div class="grid-layout">
+            
+            <div class="side-col">
+                <div class="card" style="text-align:center">
+                    <p style="font-size:0.75rem; opacity:0.6; text-transform:uppercase;">Counting</p>
+                    <h1 id="curr" style="font-size:3.5rem; color:var(--accent); margin:10px 0;">0</h1>
+                </div>
+                <div class="card">
+                    <h3 style="font-size:0.9rem; margin-bottom:15px; color:var(--accent)">ABOUT</h3>
+                    <p style="font-size:0.85rem; color:#94a3b8">This server is <b>unhinged server made by ruwaidcool</b>. 💀🔥</p>
+                </div>
             </div>
-            <div class="card">
-                <h3 style="font-size:0.9rem; margin-bottom:15px; color:var(--accent)">ABOUT SERVER</h3>
-                <p class="about-text">This server is <b>unhinged server made by ruwaidcool</b>. Enter at your own risk pangu! 💀🔥</p>
-            </div>
-        </div>
 
-        <div class="card">
-            <h2 style="margin-bottom:20px;">🏆 TOP YAPPER RANKINGS</h2>
-            <div id="lb-list"></div>
-        </div>
+            <div class="main-col">
+                <div class="card" id="dashboard-section">
+                    <h2 style="margin-bottom:20px;">🏆 TOP YAPPER RANKINGS</h2>
+                    <div id="lb-list"></div>
+                </div>
 
-        <div style="display:flex; flex-direction:column; gap:20px;">
-            <div class="card">
-                <h3 style="font-size:0.8rem; margin-bottom:15px; color:#22c55e">LIVE (<span id="on-count">0</span>)</h3>
-                <div id="on-list"></div>
+                <div class="card" id="staff-wall">
+                    <h2 style="margin-bottom:20px;">👑 STAFF WALL</h2>
+                    <div class="staff-grid" id="staff-list"></div>
+                </div>
+
+                <div class="card" id="system-wall">
+                    <h2 style="margin-bottom:20px;">⚙️ SYSTEM STATUS</h2>
+                    <div id="sys-info">
+                        <div class="sys-item"><span>Status</span><span style="color:#22c55e">Operational</span></div>
+                        <div class="sys-item"><span>Ping</span><span id="sys-ping">0ms</span></div>
+                        <div class="sys-item"><span>Uptime</span><span id="sys-uptime">0m</span></div>
+                    </div>
+                </div>
             </div>
-            <div class="card">
-                <h3 style="font-size:0.8rem; margin-bottom:15px; color:#fbbf24">😴 AFK</h3>
-                <div id="afk-list"></div>
+
+            <div class="side-col">
+                <div class="card">
+                    <h3 style="font-size:0.9rem; color:#22c55e; margin-bottom:15px;">ONLINE (<span id="on-count">0</span>)</h3>
+                    <div id="on-list"></div>
+                </div>
+                <div class="card">
+                    <h3 style="font-size:0.9rem; color:#fbbf24; margin-bottom:15px;">😴 AFK</h3>
+                    <div id="afk-list"></div>
+                </div>
             </div>
+
         </div>
     </div>
 
-    <footer style="margin: 40px 0; font-size:0.8rem; opacity:0.6;">Crafted with ❤️ by <b>Ruwaid</b></footer>
-
     <script>
-        async function fetchAll() {
+        async function update() {
             try {
-                const [s, o, c, a] = await Promise.all([
+                const [s, o, c, a, st, sys] = await Promise.all([
                     fetch('/api/stats').then(r => r.json()),
                     fetch('/api/online').then(r => r.json()),
                     fetch('/api/counting').then(r => r.json()),
-                    fetch('/api/afk').then(r => r.json())
+                    fetch('/api/afk').then(r => r.json()),
+                    fetch('/api/staff').then(r => r.json()),
+                    fetch('/api/system').then(r => r.json())
                 ]);
+
                 document.getElementById('curr').innerText = c.current || 0;
                 document.getElementById('on-count').innerText = o.count || 0;
+                document.getElementById('sys-ping').innerText = sys.ping;
+                document.getElementById('sys-uptime').innerText = sys.uptime;
+
                 document.getElementById('lb-list').innerHTML = s.map(u => `
                     <div class="rank-item">
                         <img src="${u.avatar}" class="pfp">
                         <div style="flex:1"><b>${u.username}</b><br><small style="opacity:0.5">${u.role}</small></div>
                         <div style="font-weight:800; color:var(--accent)">${u.count}</div>
-                    </div>`).join('') || '<p style="text-align:center; opacity:0.5;">Loading...</p>';
+                    </div>`).join('');
+
+                document.getElementById('staff-list').innerHTML = st.map(u => `
+                    <div class="staff-card">
+                        <img src="${u.avatar}" class="staff-pfp">
+                        <div style="font-weight:800; font-size:0.8rem">${u.username}</div>
+                        <div style="font-size:0.6rem; color:var(--accent)">${u.role}</div>
+                    </div>`).join('');
+
                 document.getElementById('on-list').innerHTML = o.members.map(m => `
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:0.85rem;">
-                        <div class="status-dot ${m.status}"></div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:0.8rem;">
                         <img src="${m.avatar}" style="width:24px; border-radius:50%">
                         <span>${m.username}</span>
                     </div>`).join('');
+
                 document.getElementById('afk-list').innerHTML = a.length ? a.map(u => `
-                    <div class="rank-item" style="border-color: rgba(251,191,36,0.2); padding:10px;">
-                        <img src="${u.avatar}" style="width:30px; border-radius:50%">
-                        <div style="overflow:hidden"><b>${u.username}</b><br><small>"${u.reason}"</small></div>
-                    </div>`).join('') : '<p style="font-size:0.7rem; opacity:0.5; text-align:center">No one AFK 🔥</p>';
-            } catch (e) { console.log("Site warming up..."); }
+                    <div class="rank-item" style="padding:10px; border-color:rgba(251,191,36,0.2)">
+                        <img src="${u.avatar}" style="width:28px; border-radius:50%">
+                        <div style="overflow:hidden"><b>${u.username}</b><br><small style="font-size:0.6rem">"${u.reason}"</small></div>
+                    </div>`).join('') : '<p style="font-size:0.7rem; opacity:0.4; text-align:center">All awake</p>';
+            } catch (e) { console.log("Updating..."); }
         }
-        setInterval(fetchAll, 10000); fetchAll();
-        const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
-        canvas.width=window.innerWidth; canvas.height=window.innerHeight;
-        let p=[];for(let i=0;i<60;i++)p.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,s:Math.random()*1,dx:Math.random()*0.2-0.1,dy:Math.random()*0.2-0.1});
-        function animate(){ctx.clearRect(0,0,canvas.width,canvas.height);p.forEach(i=>{i.x+=i.dx;i.y+=i.dy;if(i.x>canvas.width)i.x=0;ctx.fillStyle="rgba(255,255,255,0.2)";ctx.beginPath();ctx.arc(i.x,i.y,i.s,0,Math.PI*2);ctx.fill()});requestAnimationFrame(animate)}animate();
+        setInterval(update, 10000); update();
     </script>
 </body>
 </html>
