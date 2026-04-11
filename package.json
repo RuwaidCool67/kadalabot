@@ -1,6 +1,6 @@
 {
-  "name": "verkadala-hub",
-  "version": "20.0.0",
+  "name": "kadala-watchman-final",
+  "version": "23.0.0",
   "main": "index.js",
   "scripts": { "start": "node index.js" },
   "dependencies": {
