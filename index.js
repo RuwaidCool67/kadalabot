@@ -5,16 +5,17 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SITE_URL = "https://kadalabot.up.railway.app/";
 
-// ================= STORAGE =================
+// ================= STORAGE & CACHE =================
 const STATS_FILE = './userStats.json';
 const COUNT_FILE = './counting.json';
 const AFK_FILE = './afk.json';
 
+let cachedResponse = null; // THIS IS THE MASTER MEMORY
+
 const loadJSON = (file, fallback) => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file)) : fallback;
 let userStats = loadJSON(STATS_FILE, {});
-let gameData = loadJSON(COUNT_FILE, { current: 0, highscore: 0, lastUser: null });
+let gameData = loadJSON(COUNT_FILE, { current: 0, highscore: 0 });
 let afkUsers = loadJSON(AFK_FILE, {});
 
 const saveAll = () => {
@@ -23,21 +24,12 @@ const saveAll = () => {
     fs.writeFileSync(AFK_FILE, JSON.stringify(afkUsers, null, 2));
 };
 
-const formatDuration = (ms) => {
-    const mins = Math.floor(ms / 60000);
-    const hrs = Math.floor(mins / 60);
-    return hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins}m`;
-};
-
-// ================= API =================
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
-
-app.get("/api/all", async (req, res) => {
+// ================= THE REFRESHER (RUNS EVERY 30S) =================
+const updateMasterCache = async () => {
     try {
         const guild = client.guilds.cache.first();
-        if (!guild) return res.status(503).json({ error: "Warming up..." });
-        
-        // Force fetch for accurate presence, but use guild.memberCount for total
+        if (!guild) return;
+
         const m = await guild.members.fetch({ withPresences: true });
         const onlineMem = m.filter(mem => mem.presence && mem.presence.status !== 'offline' && !mem.user.bot);
         
@@ -48,65 +40,54 @@ app.get("/api/all", async (req, res) => {
 
         const afk = Object.keys(afkUsers).map(id => {
             const mem = guild.members.cache.get(id);
-            return { 
-                username: mem ? mem.user.username : "Mamba", 
-                reason: afkUsers[id].reason, 
-                since: afkUsers[id].time,
-                avatar: mem ? mem.user.displayAvatarURL() : '' 
-            };
+            return { username: mem ? mem.user.username : "Mamba", reason: afkUsers[id].reason, since: afkUsers[id].time, avatar: mem ? mem.user.displayAvatarURL() : '' };
         });
 
-        res.json({ 
-            totalMembers: guild.memberCount, // THE FIX: Live Total Count
-            stats, 
-            counting: gameData, 
-            afk, 
-            online: { count: onlineMem.size, members: onlineMem.map(mem => ({ username: mem.user.username, avatar: mem.user.displayAvatarURL(), status: mem.presence.status })) }, 
-            system: { ping: client.ws.ping + "ms", uptime: Math.floor(process.uptime() / 60) + "m" } 
-        });
-    } catch (e) { res.status(500).json({ error: "Internal Error" }); }
+        cachedResponse = { 
+            totalMembers: guild.memberCount,
+            stats, online: { count: onlineMem.size, members: onlineMem.map(mem => ({ username: mem.user.username, avatar: mem.user.displayAvatarURL() })) },
+            afk, system: { ping: client.ws.ping + "ms", uptime: Math.floor(process.uptime() / 60) + "m" }
+        };
+        console.log("Master Cache Updated! ✅");
+    } catch (e) { console.error("Cache Update Error:", e); }
+};
+
+// ================= API =================
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+app.get("/api/all", (req, res) => {
+    // If we have data in memory, send it instantly!
+    if (cachedResponse) return res.json(cachedResponse);
+    // Otherwise, send a dummy object so the site doesn't break
+    res.json({ totalMembers: 0, stats: [], online: { count: 0, members: [] }, afk: [] });
 });
 
-app.listen(PORT, () => console.log(`Census Engine live on ${PORT}`));
+app.listen(PORT, () => console.log(`Engine live on ${PORT}`));
 
 // ================= BOT =================
 const client = new Client({ intents: [3276799] });
 
-client.on('messageCreate', async (message) => {
+client.on('ready', () => {
+    console.log("Bot Ready! Starting background cache...");
+    updateMasterCache(); 
+    setInterval(updateMasterCache, 30000); // REFRESH EVERY 30 SECONDS
+});
+
+client.on('messageCreate', (message) => {
     if (message.author.bot) return;
     const userId = message.author.id;
-    const content = message.content.toLowerCase();
-
-    if (!userStats[userId]) userStats[userId] = { username: message.author.username, count: 0, role: "Member" };
+    if (!userStats[userId]) userStats[userId] = { username: message.author.username, count: 0 };
     userStats[userId].count++;
     saveAll();
-
-    // AFK logic remains same...
-    if (afkUsers[userId]) { 
-        const duration = formatDuration(Date.now() - afkUsers[userId].time);
-        delete afkUsers[userId]; saveAll(); 
-        message.reply(`Welcome back da Kumbakarna! 😂 Nee **${duration}** ah thoongitu iruntha.`); 
-    }
-
-    if (content.startsWith('kadala afk')) {
-        const reason = message.content.split('afk')[1]?.trim() || "Ethuko poirukan";
-        afkUsers[userId] = { time: Date.now(), reason: reason };
+    
+    if (message.content.toLowerCase().startsWith('kadala afk')) {
+        const r = message.content.split('afk')[1]?.trim() || "Ethuko poirukan";
+        afkUsers[userId] = { time: Date.now(), reason: r };
         saveAll();
-        return message.reply(`Seri mamba, orama poyi thoongu! 😴 Reason: ${reason}`);
+        updateMasterCache(); // Force update on action
     }
-
-    // Counting Game logic stays active in backend
-    if (message.channel.name.includes('count')) {
-        const num = parseInt(content);
-        if (!isNaN(num)) {
-            if (num !== gameData.current + 1 || userId === gameData.lastUser) {
-                gameData.current = 0; gameData.lastUser = null;
-            } else {
-                gameData.current = num; gameData.lastUser = userId;
-                if (num > gameData.highscore) gameData.highscore = num;
-            }
-            saveAll();
-        }
+    if (afkUsers[userId] && !message.content.toLowerCase().includes('kadala afk')) {
+        delete afkUsers[userId]; saveAll(); updateMasterCache();
     }
 });
 
