@@ -11,42 +11,38 @@
         * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
         body { background: var(--bg); color:white; min-height:100vh; }
         
-        /* FULL WIDTH WHITE NAV */
         nav { 
-            width: 100%; background: #ffffff; padding: 20px 6%; 
+            width: 100%; background: #ffffff; padding: 18px 6%; 
             display: flex; justify-content: space-between; align-items: center; 
-            position: sticky; top: 0; z-index: 1000;
+            position: sticky; top: 0; z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
         }
-        .logo { color: #020617; font-weight: 800; font-size: 1.4rem; text-decoration: none; }
-        .links { display: flex; gap: 30px; list-style: none; }
-        .links a { color: #020617; text-decoration: none; font-size: 0.85rem; font-weight: 800; }
+        .nav-logo { color: #020617; font-weight: 800; font-size: 1.3rem; }
+        .nav-links { display: flex; gap: 30px; list-style: none; }
+        .nav-links a { color: #020617; text-decoration: none; font-size: 0.85rem; font-weight: 800; opacity: 0.8; }
 
-        .main { padding: 40px 6%; max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr 320px; gap: 30px; }
-        .card { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 25px; margin-bottom: 30px; }
+        .main-content { padding: 40px 6%; width: 100%; max-width: 1600px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr 320px; gap: 30px; }
+        .card { background: var(--glass); backdrop-filter: blur(40px); border: 1px solid var(--border); border-radius: 24px; padding: 25px; margin-bottom: 25px; }
         
         .pfp { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent); }
-        .item { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 15px; }
+        .rank-item { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 15px; }
         
-        footer { padding: 60px; text-align: center; opacity: 0.6; font-size: 0.9rem; border-top: 1px solid var(--border); }
-        
-        /* Mobile Stack */
-        @media (max-width: 1100px) { .main { grid-template-columns: 1fr; } .links { display: none; } }
+        @media (max-width: 1100px) { .main-content { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
     <nav>
-        <a href="#" class="logo">VERKADALA HUB</a>
-        <ul class="links">
+        <div class="nav-logo">VERKADALA HUB</div>
+        <ul class="nav-links">
             <li><a href="#">DASHBOARD</a></li>
             <li><a href="#staff-wall">MODS</a></li>
             <li><a href="#system-wall">SYSTEM</a></li>
         </ul>
-        <div style="color:#22c55e; font-weight:900;">LIVE ●</div>
+        <div style="color: #22c55e; font-weight: 900; font-size: 0.8rem;">LIVE</div>
     </nav>
 
-    <div class="main">
-        <div>
+    <div class="main-content">
+        <div class="side">
             <div class="card" style="text-align:center">
                 <p style="opacity:0.6; font-size:0.7rem;">CURRENT COUNT</p>
                 <h1 id="curr" style="font-size:3.5rem; color:var(--accent)">0</h1>
@@ -57,62 +53,63 @@
             </div>
         </div>
 
-        <div>
+        <div class="center">
             <div class="card">
                 <h2>🏆 TOP YAPPER RANKINGS</h2>
                 <div id="lb-list"></div>
             </div>
-            
             <div class="card" id="staff-wall">
                 <h2>👑 STAFF WALL</h2>
-                <div id="staff-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:15px;"></div>
+                <div id="staff-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;"></div>
             </div>
-
+            <div class="card">
+                <h2>🔢 COUNTING KINGS</h2>
+                <div id="count-lb"></div>
+            </div>
             <div class="card" id="system-wall">
-                <h2>⚙️ SYSTEM DIAGNOSTICS</h2>
-                <div id="sys-info" style="margin-top:10px; font-size:0.9rem;"></div>
+                <h2>⚙️ SYSTEM</h2>
+                <div id="sys-info"></div>
             </div>
         </div>
 
-        <div>
+        <div class="side">
             <div class="card">
                 <h3>ONLINE (<span id="on-count">0</span>)</h3>
                 <div id="on-list"></div>
             </div>
             <div class="card">
-                <h3>😴 AFK MAMBAS</h3>
+                <h3>😴 AFK</h3>
                 <div id="afk-list"></div>
             </div>
         </div>
     </div>
 
-    <footer>Made with ❤️ by <b>Ruwaid</b></footer>
-
     <script>
         async function fetchAll() {
             try {
-                const [s, o, c, a, st, sys] = await Promise.all([
+                const [s, o, c, a, st, sys, clb] = await Promise.all([
                     fetch('/api/stats').then(r => r.json()),
                     fetch('/api/online').then(r => r.json()),
                     fetch('/api/counting').then(r => r.json()),
                     fetch('/api/afk').then(r => r.json()),
                     fetch('/api/staff').then(r => r.json()),
-                    fetch('/api/system').then(r => r.json())
+                    fetch('/api/system').then(r => r.json()),
+                    fetch('/api/counting-lb').then(r => r.json())
                 ]);
 
                 document.getElementById('curr').innerText = c.current;
                 document.getElementById('on-count').innerText = o.count;
                 
-                document.getElementById('lb-list').innerHTML = s.map(u => `<div class="item"><img src="${u.avatar}" class="pfp"><div><b>${u.username}</b><br><small>${u.count} msgs</small></div></div>`).join('');
-                document.getElementById('staff-list').innerHTML = st.map(u => `<div style="text-align:center"><img src="${u.avatar}" class="pfp"><br><b>${u.username}</b><br><small style="color:var(--accent)">${u.role}</small></div>`).join('');
-                document.getElementById('sys-info').innerHTML = `<p>Ping: ${sys.ping} | Uptime: ${sys.uptime} | Status: ${sys.status}</p>`;
-                document.getElementById('on-list').innerHTML = o.members.map(m => `<div class="item"><img src="${m.avatar}" style="width:25px; border-radius:50%"> ${m.username}</div>`).join('');
-                document.getElementById('afk-list').innerHTML = a.map(u => `<div class="item">😴 ${u.username}: ${u.reason}</div>`).join('') || 'None';
+                document.getElementById('lb-list').innerHTML = s.map(u => `<div class="rank-item"><img src="${u.avatar}" class="pfp"><div><b>${u.username}</b><br><small>${u.count} msgs</small></div></div>`).join('');
+                document.getElementById('count-lb').innerHTML = clb.map(u => `<div class="rank-item"><img src="${u.avatar}" class="pfp"><div><b>${u.username}</b><br><small>${u.points} correct counts</small></div></div>`).join('');
+                document.getElementById('staff-list').innerHTML = st.map(u => `<div style="text-align:center"><img src="${u.avatar}" class="pfp"><br><b>${u.username}</b></div>`).join('');
+                document.getElementById('sys-info').innerHTML = `<p>Ping: ${sys.ping} | Uptime: ${sys.uptime}</p>`;
+                document.getElementById('on-list').innerHTML = o.members.map(m => `<div>● ${m.username}</div>`).join('');
+                document.getElementById('afk-list').innerHTML = a.map(u => `<div>😴 ${u.username}: ${u.reason}</div>`).join('') || 'None';
 
             } catch(e) { console.log("Updating..."); }
         }
-        // Updates every 10 mins (600,000 ms) as requested
-        setInterval(fetchAll, 600000); 
+        setInterval(fetchAll, 600000); // 10 MINUTE UPDATE AS REQUESTED
         fetchAll();
     </script>
 </body>
