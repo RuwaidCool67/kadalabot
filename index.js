@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const { GoogleGenerativeAI } = require("@google/generative-ai"); 
 const express = require('express');
@@ -6,7 +6,7 @@ const fs = require('fs');
 
 // ================= KEEP ALIVE =================
 const app = express();
-app.get("/", (req, res) => res.send("Kadala Watchman is Online with Counting Game! 🔑🔥"));
+app.get("/", (req, res) => res.send("Kadala Watchman is Online with UI Color Roles! 🔑🔥"));
 app.listen(process.env.PORT || 3000);
 
 // ================= AI SETUP =================
@@ -106,10 +106,70 @@ function checkRateLimit(userId) {
 let currentCount = 0;
 let lastCounterId = null;
 
+// ================= COLOR ROLES CONFIG =================
+const COLORS = {
+  'color_red': { name: 'Blood Red', hex: '#FF0000', label: 'Red 🔥', style: ButtonStyle.Danger },
+  'color_blue': { name: 'Ocean Blue', hex: '#0000FF', label: 'Blue 🌊', style: ButtonStyle.Primary },
+  'color_green': { name: 'Toxic Green', hex: '#00FF00', label: 'Green 🌿', style: ButtonStyle.Success },
+  'color_yellow': { name: 'Cyber Yellow', hex: '#FFD700', label: 'Yellow ⚡', style: ButtonStyle.Secondary },
+  'color_purple': { name: 'Neon Purple', hex: '#8A2BE2', label: 'Purple 👾', style: ButtonStyle.Secondary }
+};
+
 // ================= EVENTS =================
 client.once('ready', () => {
   console.log(`Verkadala is Fully Operational 🔥 | Loaded ${getAvailableKeys().length} API Keys.`);
   client.user.setPresence({ activities: [{ name: `Server Chat 👀`, type: ActivityType.Watching }], status: "online" });
+});
+
+// ================= BUTTON INTERACTION HANDLER (COLOR ROLES) =================
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isButton()) return;
+
+  if (interaction.customId.startsWith('color_')) {
+    await interaction.deferReply({ ephemeral: true }); // Makes the reply only visible to the user who clicked
+
+    const colorData = COLORS[interaction.customId];
+    if (!colorData) return interaction.editReply("Dei mamba, ennamo thappu nadanthuruku!");
+
+    const guild = interaction.guild;
+    const member = interaction.member;
+
+    try {
+      // 1. Remove old colors (so they don't mix and mess up the profile)
+      const colorRoleNames = Object.values(COLORS).map(c => c.name);
+      const rolesToRemove = member.roles.cache.filter(r => colorRoleNames.includes(r.name));
+      if (rolesToRemove.size > 0) {
+        await member.roles.remove(rolesToRemove);
+      }
+
+      // 2. Find the role, or create it if it doesn't exist yet!
+      let role = guild.roles.cache.find(r => r.name === colorData.name);
+      if (!role) {
+        role = await guild.roles.create({
+          name: colorData.name,
+          color: colorData.hex,
+          reason: 'Kadala Color Panel Request',
+        });
+      }
+
+      // 3. Assign the new color role
+      await member.roles.add(role);
+
+      // 4. Send the DM! 😎
+      try {
+        await interaction.user.send("Done! mapla 🤝 Un profile ippo pakka mass ah irukum po!");
+      } catch (dmErr) {
+        // Just in case their DMs are locked
+        console.log(`Couldn't DM ${interaction.user.username}, DMs are closed.`);
+      }
+
+      return interaction.editReply(`Unakku **${colorData.label}** assign panniyachu blood! 🔥 Check un peru!`);
+
+    } catch (err) {
+      spitLog("ROLE ASSIGN ERROR", err);
+      return interaction.editReply("Dei admin mamba! Enaku `Manage Roles` permission kudu, illana en bot role-ah Server Settings la mela thooki podu! Ennala role assign panna mudila 😭");
+    }
+  }
 });
 
 // ================= MAIN MESSAGE HANDLER =================
@@ -118,51 +178,48 @@ client.on('messageCreate', async (message) => {
   const content = message.content.toLowerCase();
   const userId = message.author.id;
 
-  // --- 1. THE COUNTING GAME 🔢 ---
-  // Works ONLY in channels with 'counting' or 'count' in the name
+  // --- 1. NEW: THE COLOR PANEL UI 🎨 ---
+  if (/^(kadala|kadalai)\s+colourpanel/i.test(content)) {
+    const row = new ActionRowBuilder();
+
+    // Dynamically build buttons from our config
+    for (const [id, data] of Object.entries(COLORS)) {
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId(id)
+          .setLabel(data.label)
+          .setStyle(data.style)
+      );
+    }
+
+    return message.channel.send({ 
+      content: "🎨 **KADALA COLOR PANEL** 🎨\nDei mapla, unakku pudicha color-ah select pannu! Un Peru and Profile color apdiye maarum:", 
+      components: [row] 
+    });
+  }
+
+  // --- 2. THE COUNTING GAME 🔢 ---
   if (message.channel.name.includes('counting') || message.channel.name.includes('count')) {
     if (/^\d+$/.test(content)) { 
       const parsedNum = parseInt(content);
-
-      // Rule 1: Cannot count twice in a row
       if (userId === lastCounterId) {
-        const wrongNumber = currentCount; // Save before reset
-        currentCount = 0;
-        lastCounterId = null;
-        message.react('❌');
+        currentCount = 0; lastCounterId = null; message.react('❌');
         return message.reply(`Dei gubeer! Oruvane thodarndhu 2 thadava count panna koodathu! 💀 \n**Game Reset to 0!** Start from 1 da pangu.`);
-      } 
-      // Rule 2: Wrong number or repeated number
-      else if (parsedNum !== currentCount + 1) {
+      } else if (parsedNum !== currentCount + 1) {
         const expected = currentCount + 1;
-        currentCount = 0;
-        lastCounterId = null;
-        message.react('❌');
+        currentCount = 0; lastCounterId = null; message.react('❌');
         return message.reply(`Dei mamba, math theriyaatha da unaku? The next number was **${expected}**! 💀 \n**Game Reset to 0!** Start from 1.`);
-      } 
-      // Rule 3: Correct Number!
-      else {
-        currentCount = parsedNum;
-        lastCounterId = userId;
-        message.react('✅');
-
-        // Milestones
-        if (currentCount === 50) {
-          message.react('🥉');
-          message.channel.send(`🎉 Yovv! **50 reached!** 🥉 Bronze tier unlocked da pasangala! Vibe it up!`);
-        } else if (currentCount === 100) {
-          message.react('🥇');
-          message.channel.send(`🔥 THALAIVAA! **100 CENTURY!** 🥇 Gold tier reached! Pakka clutch!`);
-        } else if (currentCount === 150) {
-          message.react('💎');
-          message.channel.send(`💎 VERA LEVEL MAMBA! **150 reached!** Diamond bloods! Enna speed uh!`);
-        }
-        return; // Stops here so AI doesn't reply
+      } else {
+        currentCount = parsedNum; lastCounterId = userId; message.react('✅');
+        if (currentCount === 50) { message.react('🥉'); message.channel.send(`🎉 Yovv! **50 reached!** 🥉 Bronze tier unlocked da pasangala!`); } 
+        else if (currentCount === 100) { message.react('🥇'); message.channel.send(`🔥 THALAIVAA! **100 CENTURY!** 🥇 Gold tier reached! Pakka clutch!`); } 
+        else if (currentCount === 150) { message.react('💎'); message.channel.send(`💎 VERA LEVEL MAMBA! **150 reached!** Diamond bloods! Enna speed uh!`); }
+        return; 
       }
     }
   }
 
-  // --- 2. THE AFK PING DEFENDER 🛡️ ---
+  // --- 3. THE AFK PING DEFENDER 🛡️ ---
   if (message.mentions.users.size > 0) {
     message.mentions.users.forEach(user => {
       if (afkUsers[user.id]) {
@@ -173,31 +230,23 @@ client.on('messageCreate', async (message) => {
     });
   }
 
-  // --- 3. CREDITS COMMAND ---
+  // --- 4. CREDITS COMMAND ---
   if (/^(kadala|kadalai)\s+(credits|who made you|creator)/i.test(content)) {
     return message.reply("😎 Naan oru masterpiece da!\n\n👑 **Created by:** `@ruwaid`\n🔥 **Hardware MVP:** `@hislaptop` (Paavam antha machine)\n🧠 **AI Partner:** `@Gemini`");
   }
 
-  // --- 4. THE BUNKER (Can I Bunk?) ---
+  // --- 5. THE BUNKER (Can I Bunk?) ---
   const bunkMatch = content.match(/^(kadala|kadalai)\s+bunk\s+(\d+)\s+(\d+)/i);
   if (bunkMatch) {
     const totalClasses = parseInt(bunkMatch[2]);
     const attendedClasses = parseInt(bunkMatch[3]);
-
-    if (attendedClasses > totalClasses) {
-      return message.reply("Dei gubeer! Total classes vida nee eppadi da adhigama attend panna mudiyum? 💀 Check the numbers.");
-    }
-
+    if (attendedClasses > totalClasses) return message.reply("Dei gubeer! Total classes vida nee eppadi da adhigama attend panna mudiyum? 💀 Check the numbers.");
     const percentage = (attendedClasses / totalClasses) * 100;
     let replyText = `📊 **Bunk Math:** Un percentage ippo **${percentage.toFixed(2)}%**.\n\n`;
-
     if (percentage >= 75) {
       const bunksAllowed = Math.floor((attendedClasses / 0.75) - totalClasses);
-      if (bunksAllowed > 0) {
-        replyText += `😎 Thalaivaa! Nee safe zone la irukka. Innum **${bunksAllowed} classes** thairiyama bunk adikkalam!`;
-      } else {
-        replyText += `⚠️ Border la thongitu irukka mamba! Inimey bunk adicha maattikuva. College ku kelaambu!`;
-      }
+      if (bunksAllowed > 0) replyText += `😎 Thalaivaa! Nee safe zone la irukka. Innum **${bunksAllowed} classes** thairiyama bunk adikkalam!`;
+      else replyText += `⚠️ Border la thongitu irukka mamba! Inimey bunk adicha maattikuva. College ku kelaambu!`;
     } else {
       const needed = Math.ceil(((0.75 * totalClasses) - attendedClasses) / 0.25);
       replyText += `💀 Danger Zone da mamba! 75% thoda innum **${needed} classes** continuously poganum. Padi!`;
@@ -205,12 +254,10 @@ client.on('messageCreate', async (message) => {
     return message.reply(replyText);
   }
 
-  // --- 5. AFK LEADERBOARD ---
+  // --- 6. AFK LEADERBOARD ---
   if (/^(kadala|kadalai)\s+(afk leaderboard|leaderboard)/i.test(content)) {
     const sortedStats = Object.entries(afkStats).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    
     if (sortedStats.length === 0) return message.reply("Innum evanum AFK pogala da mamba! Server active ah thaan iruku. 💀");
-
     let lbString = "🏆 **THOONGU MOONJI LEADERBOARD (Top 5 AFKers)** 🏆\n\n";
     for (let i = 0; i < sortedStats.length; i++) {
       try {
@@ -223,16 +270,14 @@ client.on('messageCreate', async (message) => {
     return message.reply(lbString);
   }
 
-  // --- 6. AFK LOGIC (Set & Return) ---
+  // --- 7. AFK LOGIC (Set & Return) ---
   if (afkUsers[userId]) {
     const timeAway = Date.now() - afkUsers[userId].time;
     const reasonText = afkUsers[userId].reason ? `(Reason: ${afkUsers[userId].reason})` : "";
     delete afkUsers[userId];
     saveAFK();
-
     afkStats[userId] = (afkStats[userId] || 0) + timeAway;
     saveStats();
-
     return message.reply(`dei comeback ah 😏 **${formatTime(timeAway)}** wait panna vachitiye mamba! ${reasonText}`);
   }
 
@@ -244,7 +289,7 @@ client.on('messageCreate', async (message) => {
     return message.reply(`seri da AFK 😴 **Reason:** ${reason} | safe ah poitu vaa mamba!`);
   }
 
-  // --- 7. VC JOIN / LEAVE ---
+  // --- 8. VC JOIN / LEAVE ---
   if (/^(kadala|kadalai)\s+(vc join|join vc)/i.test(content)) {
     const vc = message.member.voice.channel;
     if (!vc) return message.reply("Bro, you need to join a Voice Channel first! 😭");
@@ -259,9 +304,9 @@ client.on('messageCreate', async (message) => {
     return message.reply("Left the VC! 🚶‍♂️");
   }
 
-  // --- 8. AI CHAT LOGIC ---
+  // --- 9. AI CHAT LOGIC ---
   const isReplyToBot = message.reference && message.mentions.repliedUser?.id === client.user.id;
-  const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(?!afk|vc join|join vc|vc leave|leave vc|bunk|leaderboard|debug|credits)(.*)/i);
+  const aiPrefixMatch = message.content.match(/^(kadala|kadalai)\s+(?!afk|vc join|join vc|vc leave|leave vc|bunk|leaderboard|debug|credits|colourpanel)(.*)/i);
 
   if (aiPrefixMatch || isReplyToBot) {
     let userPrompt = aiPrefixMatch ? aiPrefixMatch[2].trim() : message.content;
