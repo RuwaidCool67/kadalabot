@@ -3,100 +3,173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verkadala Hub | Espresso</title>
+    <title>Verkadala Hub | ver2_a</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        
         :root { 
-            --bg: #0c0805;
-            --surface: rgba(30, 20, 15, 0.85); 
-            --accent: #d2a679;
-            --border: rgba(210, 166, 121, 0.15); 
-            --text-sec: #b09987;
+            --bg: #010409;
+            --surface: rgba(13, 17, 23, 0.7); 
+            --accent: #33b5e5; /* Electric Holo Blue */
+            --accent-glow: rgba(51, 181, 229, 0.3);
+            --border: rgba(51, 181, 229, 0.2); 
+            --text-sec: #8b949e;
             --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
-        body { background: var(--bg); color:white; min-height:100vh; overflow: hidden; display: flex; flex-direction: column; }
 
-        .blurry-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; filter: blur(100px); }
-        .blob { position: absolute; width: 60vw; height: 60vw; border-radius: 50%; opacity: 0.12; animation: move 25s infinite alternate; background: var(--accent); }
-        @keyframes move { from { transform: translate(-10%, -10%); } to { transform: translate(30%, 30%); } }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter', sans-serif; }
+        body { background: var(--bg); color:white; min-height:100vh; overflow-x: hidden; display: flex; flex-direction: column; }
 
-        #splash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 9999; transition: 0.8s; color: var(--accent); letter-spacing: 4px; }
+        /* --- BLURRY CYBER BACKGROUND --- */
+        .blurry-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; overflow: hidden; filter: blur(120px);
+        }
+        .blob {
+            position: absolute; width: 60vw; height: 60vw;
+            border-radius: 50%; opacity: 0.15;
+            animation: move 25s infinite alternate;
+        }
+        .blob-1 { background: var(--accent); top: -10%; left: -10%; }
+        .blob-2 { background: #6a00ff; bottom: -10%; right: -10%; animation-delay: -5s; }
+        @keyframes move {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(15%, 15%) scale(1.1); }
+        }
 
+        /* --- SPLASH SCREEN --- */
+        #splash { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: var(--bg); display: flex; justify-content: center; 
+            align-items: center; z-index: 9999; transition: 0.8s; 
+        }
+        .splash-text { letter-spacing: 4px; font-weight: 800; color: var(--accent); text-align: center; font-size: 0.8rem; line-height: 2; }
+
+        /* --- NAVIGATION --- */
         nav { 
-            width: 92%; max-width: 1100px; background: var(--surface); backdrop-filter: blur(25px); border: 1px solid var(--border); 
-            padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; 
-            position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; border-radius: 100px;
+            width: 92%; max-width: 1100px; background: var(--surface); backdrop-filter: blur(25px); 
+            border: 1px solid var(--border); padding: 14px 25px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%); 
+            z-index: 1000; border-radius: 100px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
         }
         .menu-btn { cursor: pointer; display: flex; flex-direction: column; gap: 5px; }
         .menu-btn span { width: 22px; height: 2px; background: var(--accent); border-radius: 2px; }
 
-        #sidebar { position: fixed; top: 0; left: -300px; width: 280px; height: 100%; background: var(--bg); border-right: 1px solid var(--border); z-index: 2000; padding: 100px 25px; transition: var(--transition); }
+        /* --- SIDEBAR --- */
+        #sidebar {
+            position: fixed; top: 0; left: -300px; width: 280px; height: 100%;
+            background: rgba(13, 17, 23, 0.95); backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border); z-index: 2000; 
+            padding: 100px 25px; transition: var(--transition);
+        }
         #sidebar.open { left: 0; }
-        .menu-item { padding: 15px; font-size: 1rem; color: var(--text-sec); cursor: pointer; border-radius: 12px; margin-bottom: 5px; }
-        .menu-item.active { background: var(--surface); color: var(--accent); font-weight: 800; }
+        .menu-item { padding: 15px 20px; font-size: 0.9rem; color: var(--text-sec); cursor: pointer; border-radius: 15px; margin-bottom: 8px; transition: 0.3s; font-weight: 600; }
+        .menu-item.active { background: rgba(51, 181, 229, 0.1); color: var(--accent); }
         
         #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1500; display: none; }
 
-        .main-container { padding: 120px 5% 40px; flex-grow: 1; overflow-y: auto; }
-        .section { display: none; opacity: 0; transform: translateY(20px); transition: var(--transition); }
+        /* --- CONTENT --- */
+        .main-container { padding: 120px 5% 40px; flex-grow: 1; overflow-y: auto; max-width: 1400px; margin: 0 auto; width: 100%; }
+        .section { display: none; opacity: 0; transform: translateY(15px); transition: var(--transition); }
         .section.active { display: block; opacity: 1; transform: translateY(0); }
 
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 32px; padding: 25px; margin-bottom: 25px; }
-        .item { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 18px; }
-        .pfp { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent); }
+        .card { 
+            background: var(--surface); backdrop-filter: blur(40px); 
+            border: 1px solid var(--border); border-radius: 28px; 
+            padding: 28px; margin-bottom: 25px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+        }
 
-        footer { padding: 40px; text-align: center; font-size: 0.7rem; color: var(--text-sec); letter-spacing: 1px; }
+        .item { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; padding: 14px; background: rgba(255,255,255,0.03); border-radius: 20px; border: 1px solid transparent; transition: 0.3s; }
+        .item:hover { border-color: var(--border); background: rgba(51, 181, 229, 0.05); }
+        .pfp { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--accent); object-fit: cover; }
 
-        @media (max-width: 800px) { nav { width: 95%; } .main-container { padding-top: 100px; } }
+        .stat-val { font-size: 4.5rem; font-weight: 800; color: var(--accent); letter-spacing: -4px; text-shadow: 0 0 30px var(--accent-glow); }
+
+        footer { padding: 40px; text-align: center; font-size: 0.7rem; color: var(--text-sec); letter-spacing: 2px; text-transform: uppercase; }
+
+        @media (max-width: 1000px) { .main-container { padding-top: 100px; } nav { width: 95%; } }
     </style>
 </head>
 <body>
-    <div class="blurry-bg"><div class="blob"></div></div>
-    <div id="splash"><b>POWERED BY RUWAIDCOOL SOFTWARE</b></div>
+    <div class="blurry-bg"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+
+    <div id="splash">
+        <div class="splash-text">ver2_a KADALA BOT API<br>BY RUWAID</div>
+    </div>
 
     <div id="overlay" onclick="toggleMenu()"></div>
     <div id="sidebar">
-        <h3 style="color: var(--accent); margin-bottom: 30px;">V. OS</h3>
-        <div class="menu-item active" onclick="showSection('dash')">Dashboard</div>
-        <div class="menu-item" onclick="showSection('yappers')">Rankings</div>
-        <div class="menu-item" onclick="showSection('sys')">System</div>
+        <h3 style="color: var(--accent); margin-bottom: 40px; letter-spacing: 2px; font-weight: 800;">VER2_A</h3>
+        <div class="menu-item active" onclick="showSection('dash')">🏠 DASHBOARD</div>
+        <div class="menu-item" onclick="showSection('yappers')">🏆 RANKINGS</div>
+        <div class="menu-item" onclick="showSection('sys')">⚙️ SYSTEM</div>
     </div>
 
     <nav>
         <div class="menu-btn" onclick="toggleMenu()"><span></span><span></span><span></span></div>
-        <b style="color: var(--accent);">VERKADALA HUB</b>
+        <b style="color: var(--accent); font-weight: 800; letter-spacing: 1px;">VERKADALA HUB</b>
         <div style="color: #22c55e; font-size: 0.7rem; font-weight: 900;">LIVE ●</div>
     </nav>
 
     <div class="main-container">
         <div id="section-dash" class="section active">
-            <div class="card" style="text-align:center">
-                <p style="opacity:0.6; font-size:0.6rem; text-transform:uppercase;">Squad Strength</p>
-                <h1 id="total-mem" style="font-size:5rem; color:var(--accent); letter-spacing: -4px;">0</h1>
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 25px;">
+                <div>
+                    <div class="card" style="text-align:center">
+                        <p style="opacity:0.6; font-size:0.6rem; text-transform:uppercase; font-weight: 700;">Squad Strength</p>
+                        <h1 id="total-mem" class="stat-val">0</h1>
+                    </div>
+                    <div class="card">
+                        <h4 style="color: var(--accent); margin-bottom: 10px;">ABOUT</h4>
+                        <p style="font-size:0.85rem; color: var(--text-sec); line-height: 1.6;">Unhinged server monitoring powered by <b>ver2_a API</b>. Designed for peak yapping performance. 💀🔥</p>
+                    </div>
+                </div>
+                <div>
+                    <div class="card">
+                        <h4 style="color:#22c55e; margin-bottom: 20px; font-weight: 800;">ACTIVE MEMBERS (<span id="on-count">0</span>)</h4>
+                        <div id="on-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;"></div>
+                    </div>
+                    <div class="card">
+                        <h4 style="color:#fbbf24; margin-bottom: 20px; font-weight: 800;">😴 AFK LOGS</h4>
+                        <div id="afk-list"></div>
+                    </div>
+                </div>
             </div>
-            <div class="card"><h4>😴 AFK STATUS</h4><div id="afk-list" style="margin-top:15px;"></div></div>
         </div>
 
         <div id="section-yappers" class="section">
-            <div class="card"><b>🏆 TOP YAPPER RANKINGS</b><div id="lb-list" style="margin-top:20px;"></div></div>
-            <div class="card"><b>🔢 COUNTING KINGS</b><div id="count-lb" style="margin-top:20px;"></div></div>
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 25px;">
+                <div class="card">
+                    <b style="color: var(--accent); display: block; margin-bottom: 20px;">🏆 TOP YAPPER RANKINGS</b>
+                    <div id="lb-list"></div>
+                </div>
+                <div class="card">
+                    <b style="color: var(--accent); display: block; margin-bottom: 20px;">🔢 COUNTING KINGS</b>
+                    <div id="count-lb"></div>
+                </div>
+            </div>
         </div>
 
         <div id="section-sys" class="section">
-            <div class="card">
-                <h4>DEVICE STATUS</h4>
-                <div class="item"><div><b>Ping</b><br><small id="ping">0ms</small></div></div>
-                <div class="item"><div><b>Uptime</b><br><small id="uptime">0m</small></div></div>
+            <div class="card" style="max-width: 600px; margin: 0 auto;">
+                <h4 style="color: var(--accent); margin-bottom: 20px;">API DIAGNOSTICS</h4>
+                <div class="item"><div><b>WebSocket Ping</b><br><small id="ping" style="color:var(--accent)">0ms</small></div></div>
+                <div class="item"><div><b>Bot Uptime</b><br><small id="uptime" style="color:var(--accent)">0m</small></div></div>
+                <div class="item"><div><b>API Version</b><br><small style="color:var(--accent)">ver2_a</small></div></div>
             </div>
         </div>
     </div>
 
-    <footer>CRAFTED W LOVE BY <b>RUWAIDCOOL</b></footer>
+    <footer>ver2_a kadala bot api by ruwaid</footer>
 
     <script>
-        setTimeout(() => { document.getElementById('splash').style.opacity = '0'; setTimeout(() => document.getElementById('splash').style.display = 'none', 800); }, 2000);
+        // Splash logic
+        setTimeout(() => { document.getElementById('splash').style.opacity = '0'; setTimeout(() => document.getElementById('splash').style.display = 'none', 800); }, 1800);
 
+        // Sidebar logic
         function toggleMenu() {
             const side = document.getElementById('sidebar');
             const over = document.getElementById('overlay');
@@ -109,6 +182,7 @@
             }
         }
 
+        // Switch Sections
         function showSection(id) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
@@ -120,11 +194,25 @@
         function render(data) {
             if(!data || !data.yappers) return;
             document.getElementById('total-mem').innerText = data.totalMembers || 0;
+            document.getElementById('on-count').innerText = data.online?.count || 0;
             document.getElementById('ping').innerText = data.system?.ping || '0ms';
             document.getElementById('uptime').innerText = data.system?.uptime || '0m';
-            document.getElementById('lb-list').innerHTML = data.yappers.map(u => `<div class="item"><img src="${u.avatar}" class="pfp"><div><b>${u.username}</b><br><small>${u.count} msgs</small></div></div>`).join('');
-            document.getElementById('count-lb').innerHTML = (data.counters || []).map(u => `<div class="item"><img src="${u.avatar}" class="pfp"><div><b>${u.username}</b><br><small>${u.points} points</small></div></div>`).join('');
-            document.getElementById('afk-list').innerHTML = (data.afk || []).map(u => `<div class="item" style="border-left:3px solid #fbbf24;"><div><b>${u.username}</b><br><small>"${u.reason}"</small></div></div>`).join('') || 'All bloods awake.';
+            
+            // Fix: Correct mapping for Online Members
+            document.getElementById('on-list').innerHTML = (data.online?.members || []).map(m => `
+                <div class="item" style="background:none; padding:8px; border: 1px solid var(--border);">
+                    <img src="${m.avatar}" style="width:28px; border-radius:50%; border:1px solid var(--accent);"> 
+                    <span style="font-size:0.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.username}</span>
+                </div>`).join('') || '<p style="font-size:0.7rem; opacity:0.5">Offline</p>';
+
+            document.getElementById('lb-list').innerHTML = data.yappers.map(u => `
+                <div class="item"><img src="${u.avatar}" class="pfp"><div><b>${u.username}</b><br><small style="color:var(--text-sec)">${u.count} messages</small></div></div>`).join('');
+            
+            document.getElementById('count-lb').innerHTML = (data.counters || []).map(u => `
+                <div class="item"><img src="${u.avatar}" class="pfp"><div><b>${u.username}</b><br><small style="color:var(--text-sec)">${u.points} points</small></div></div>`).join('') || 'None';
+            
+            document.getElementById('afk-list').innerHTML = (data.afk || []).map(u => `
+                <div class="item" style="border-left:3px solid #fbbf24;"><div><b>${u.username}</b><br><small style="opacity:0.6">"${u.reason}"</small></div></div>`).join('') || '<p style="opacity:0.4; font-size:0.7rem; text-align:center;">All bloods awake.</p>';
         }
 
         async function fetchAll() {
@@ -132,7 +220,7 @@
                 const res = await fetch('/api/all');
                 const data = await res.json();
                 if (data.totalMembers) { localStorage.setItem('kadala_cache', JSON.stringify(data)); render(data); }
-            } catch(e) { console.log("Brewing..."); }
+            } catch(e) { console.log("Sync error"); }
         }
 
         const cached = localStorage.getItem('kadala_cache');
