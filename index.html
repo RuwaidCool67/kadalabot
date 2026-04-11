@@ -1,154 +1,112 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verkadala Hub | Official</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
-        :root { --bg: #020617; --glass: rgba(15, 23, 42, 0.85); --accent: #6366f1; --border: rgba(255,255,255,0.12); }
-        html { scroll-behavior: smooth; }
-        * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
-        body { background: var(--bg); color:white; min-height:100vh; display: flex; flex-direction: column; }
-        
-        /* --- FULL WIDTH WHITE NAV --- */
-        nav { 
-            width: 100%; background: var(--glass); backdrop-filter: blur(30px); 
-            border-bottom: 1px solid var(--border); padding: 20px 6%; 
-            display: flex; justify-content: space-between; align-items: center; 
-            position: sticky; top: 0; z-index: 1000;
+const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
+const express = require('express');
+const fs = require('fs');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// ================= DATABASE RELOAD =================
+const STATS_FILE = './userStats.json';
+const COUNT_DB_FILE = './countStats.json';
+const GAME_FILE = './counting.json';
+const AFK_FILE = './afk.json';
+
+let userStats = fs.existsSync(STATS_FILE) ? JSON.parse(fs.readFileSync(STATS_FILE)) : {};
+let countStats = fs.existsSync(COUNT_DB_FILE) ? JSON.parse(fs.readFileSync(COUNT_DB_FILE)) : {};
+let gameData = fs.existsSync(GAME_FILE) ? JSON.parse(fs.readFileSync(GAME_FILE)) : { current: 0, highscore: 0, lastUser: null };
+let afkUsers = fs.existsSync(AFK_FILE) ? JSON.parse(fs.readFileSync(AFK_FILE)) : {};
+
+const saveAll = () => {
+    fs.writeFileSync(STATS_FILE, JSON.stringify(userStats, null, 2));
+    fs.writeFileSync(COUNT_DB_FILE, JSON.stringify(countStats, null, 2));
+    fs.writeFileSync(GAME_FILE, JSON.stringify(gameData, null, 2));
+    fs.writeFileSync(AFK_FILE, JSON.stringify(afkUsers, null, 2));
+};
+
+// ================= API ROUTES =================
+app.get("/", (req, res) => res.sendFile(__dirname + "/index.html"));
+
+app.get("/api/stats", async (req, res) => {
+    const guild = client.guilds.cache.first();
+    if (!guild) return res.json([]);
+    const sorted = Object.values(userStats).sort((a, b) => b.count - a.count).filter(u => !u.isBot).slice(0, 10);
+    res.json(sorted.map(s => {
+        const m = guild.members.cache.find(mem => mem.user.username === s.username);
+        return { ...s, avatar: m ? m.user.displayAvatarURL() : 'https://cdn.discordapp.com/embed/avatars/0.png' };
+    }));
+});
+
+app.get("/api/staff", async (req, res) => {
+    const guild = client.guilds.cache.first();
+    if (!guild) return res.json([]);
+    const staff = Object.values(userStats).filter(u => u.role === "Verified Owner" || u.role === "Mod");
+    res.json(staff.map(s => {
+        const m = guild.members.cache.find(mem => mem.user.username === s.username);
+        return { username: s.username, role: s.role, avatar: m ? m.user.displayAvatarURL() : '' };
+    }));
+});
+
+app.get("/api/online", async (req, res) => {
+    const guild = client.guilds.cache.first();
+    if (!guild) return res.json({ count: 0, members: [] });
+    const m = await guild.members.fetch({ withPresences: true });
+    const online = m.filter(mem => mem.presence && mem.presence.status !== 'offline' && !mem.user.bot);
+    res.json({ count: online.size, members: online.map(mem => ({ username: mem.user.username, avatar: mem.user.displayAvatarURL(), status: mem.presence.status })) });
+});
+
+app.get("/api/system", (req, res) => res.json({ ping: client.ws.ping + "ms", uptime: Math.floor(process.uptime() / 60) + "m", status: "Operational" }));
+app.get("/api/counting", (req, res) => res.json(gameData));
+app.get("/api/counting-lb", (req, res) => {
+    const sorted = Object.values(countStats).sort((a, b) => b.points - a.points).slice(0, 5);
+    res.json(sorted);
+});
+app.get("/api/afk", (req, res) => {
+    const guild = client.guilds.cache.first();
+    res.json(Object.keys(afkUsers).map(id => {
+        const m = guild.members.cache.get(id);
+        return { username: m ? m.user.username : "Mamba", reason: afkUsers[id].reason, avatar: m ? m.user.displayAvatarURL() : '' };
+    }));
+});
+
+app.listen(PORT, () => console.log(`Hub Running...`));
+
+// ================= BOT LOGIC =================
+const client = new Client({ intents: [3276799] }); // All Intents
+
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+    const userId = message.author.id;
+    const content = message.content.toLowerCase();
+
+    // Stats Logic
+    if (!userStats[userId]) userStats[userId] = { username: message.author.username, count: 0, role: userId === message.guild.ownerId ? "Verified Owner" : "Member" };
+    userStats[userId].count++;
+    userStats[userId].username = message.author.username;
+    saveAll();
+
+    // Counting Game
+    if (message.channel.name.includes('count')) {
+        const num = parseInt(content);
+        if (!isNaN(num)) {
+            if (num !== gameData.current + 1 || userId === gameData.lastUser) {
+                message.react('❌'); gameData.current = 0; gameData.lastUser = null;
+            } else {
+                message.react('✅'); gameData.current = num; gameData.lastUser = userId;
+                if (num > gameData.highscore) gameData.highscore = num;
+                if (!countStats[userId]) countStats[userId] = { username: message.author.username, points: 0 };
+                countStats[userId].points++;
+            }
+            saveAll();
         }
-        .nav-logo { color: #ffffff; font-weight: 800; font-size: 1.4rem; letter-spacing: -1px; }
-        .nav-links { display: flex; gap: 35px; list-style: none; }
-        .nav-links a { color: #ffffff; text-decoration: none; font-size: 0.85rem; font-weight: 800; opacity: 0.7; transition: 0.3s; }
-        .nav-links a:hover { opacity: 1; }
+    }
 
-        .main-content { padding: 40px 6%; width: 100%; max-width: 1500px; margin: 0 auto; }
-        .grid-layout { display: grid; grid-template-columns: 320px 1fr 320px; gap: 30px; }
+    // Command Parser
+    if (content.startsWith('kadala afk')) {
+        afkUsers[userId] = { time: Date.now(), reason: content.split('afk')[1]?.trim() || "No reason" };
+        saveAll();
+        message.reply("AFK set pangu!");
+    }
+    if (afkUsers[userId] && !content.startsWith('kadala afk')) { delete afkUsers[userId]; saveAll(); message.reply("Back!"); }
+});
 
-        .card { 
-            background: var(--glass); backdrop-filter: blur(40px); border: 1px solid var(--border); 
-            border-radius: 28px; padding: 28px; height: fit-content; margin-bottom: 30px;
-        }
-
-        .rank-item { display:flex; align-items:center; gap:14px; padding:14px; background:rgba(255,255,255,0.03); border-radius:20px; margin-bottom:12px; border:1px solid var(--border); }
-        .pfp { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--border); }
-        
-        .staff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; }
-        .staff-card { text-align: center; padding: 15px; background: rgba(99, 102, 241, 0.05); border: 1px solid var(--accent); border-radius: 20px; }
-        .staff-pfp { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 8px; }
-
-        .sys-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-
-        @media (max-width: 1100px) { .grid-layout { grid-template-columns: 1fr; } }
-    </style>
-</head>
-<body>
-
-    <nav>
-        <div class="nav-logo">VERKADALA HUB</div>
-        <ul class="nav-links">
-            <li><a href="#">DASHBOARD</a></li>
-            <li><a href="#staff-wall">MODS</a></li>
-            <li><a href="#system-wall">SYSTEM</a></li>
-        </ul>
-        <div style="font-size: 0.75rem; font-weight: 800; color: #22c55e;">● LIVE</div>
-    </nav>
-
-    <div class="main-content">
-        <div class="grid-layout">
-            
-            <div class="side-col">
-                <div class="card" style="text-align:center">
-                    <p style="font-size:0.75rem; opacity:0.6; text-transform:uppercase;">Counting</p>
-                    <h1 id="curr" style="font-size:3.5rem; color:var(--accent); margin:10px 0;">0</h1>
-                </div>
-                <div class="card">
-                    <h3 style="font-size:0.9rem; margin-bottom:15px; color:var(--accent)">ABOUT</h3>
-                    <p style="font-size:0.85rem; color:#94a3b8">This server is <b>unhinged server made by ruwaidcool</b>. 💀🔥</p>
-                </div>
-            </div>
-
-            <div class="main-col">
-                <div class="card" id="dashboard-section">
-                    <h2 style="margin-bottom:20px;">🏆 TOP YAPPER RANKINGS</h2>
-                    <div id="lb-list"></div>
-                </div>
-
-                <div class="card" id="staff-wall">
-                    <h2 style="margin-bottom:20px;">👑 STAFF WALL</h2>
-                    <div class="staff-grid" id="staff-list"></div>
-                </div>
-
-                <div class="card" id="system-wall">
-                    <h2 style="margin-bottom:20px;">⚙️ SYSTEM STATUS</h2>
-                    <div id="sys-info">
-                        <div class="sys-item"><span>Status</span><span style="color:#22c55e">Operational</span></div>
-                        <div class="sys-item"><span>Ping</span><span id="sys-ping">0ms</span></div>
-                        <div class="sys-item"><span>Uptime</span><span id="sys-uptime">0m</span></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="side-col">
-                <div class="card">
-                    <h3 style="font-size:0.9rem; color:#22c55e; margin-bottom:15px;">ONLINE (<span id="on-count">0</span>)</h3>
-                    <div id="on-list"></div>
-                </div>
-                <div class="card">
-                    <h3 style="font-size:0.9rem; color:#fbbf24; margin-bottom:15px;">😴 AFK</h3>
-                    <div id="afk-list"></div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    <script>
-        async function update() {
-            try {
-                const [s, o, c, a, st, sys] = await Promise.all([
-                    fetch('/api/stats').then(r => r.json()),
-                    fetch('/api/online').then(r => r.json()),
-                    fetch('/api/counting').then(r => r.json()),
-                    fetch('/api/afk').then(r => r.json()),
-                    fetch('/api/staff').then(r => r.json()),
-                    fetch('/api/system').then(r => r.json())
-                ]);
-
-                document.getElementById('curr').innerText = c.current || 0;
-                document.getElementById('on-count').innerText = o.count || 0;
-                document.getElementById('sys-ping').innerText = sys.ping;
-                document.getElementById('sys-uptime').innerText = sys.uptime;
-
-                document.getElementById('lb-list').innerHTML = s.map(u => `
-                    <div class="rank-item">
-                        <img src="${u.avatar}" class="pfp">
-                        <div style="flex:1"><b>${u.username}</b><br><small style="opacity:0.5">${u.role}</small></div>
-                        <div style="font-weight:800; color:var(--accent)">${u.count}</div>
-                    </div>`).join('');
-
-                document.getElementById('staff-list').innerHTML = st.map(u => `
-                    <div class="staff-card">
-                        <img src="${u.avatar}" class="staff-pfp">
-                        <div style="font-weight:800; font-size:0.8rem">${u.username}</div>
-                        <div style="font-size:0.6rem; color:var(--accent)">${u.role}</div>
-                    </div>`).join('');
-
-                document.getElementById('on-list').innerHTML = o.members.map(m => `
-                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:0.8rem;">
-                        <img src="${m.avatar}" style="width:24px; border-radius:50%">
-                        <span>${m.username}</span>
-                    </div>`).join('');
-
-                document.getElementById('afk-list').innerHTML = a.length ? a.map(u => `
-                    <div class="rank-item" style="padding:10px; border-color:rgba(251,191,36,0.2)">
-                        <img src="${u.avatar}" style="width:28px; border-radius:50%">
-                        <div style="overflow:hidden"><b>${u.username}</b><br><small style="font-size:0.6rem">"${u.reason}"</small></div>
-                    </div>`).join('') : '<p style="font-size:0.7rem; opacity:0.4; text-align:center">All awake</p>';
-            } catch (e) { console.log("Updating..."); }
-        }
-        setInterval(update, 10000); update();
-    </script>
-</body>
-</html>
+client.login(process.env.TOKEN);
