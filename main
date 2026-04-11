@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verkadala Hub | v5.0</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        :root { --bg: #020617; --glass: rgba(15, 23, 42, 0.75); --accent: #6366f1; --border: rgba(255,255,255,0.08); }
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Plus Jakarta Sans',sans-serif; }
+        body { background: var(--bg); color:white; min-height:100vh; display:flex; flex-direction:column; align-items:center; overflow-x:hidden; }
+        #canvas { position:fixed; z-index:-1; top:0; left:0; width:100%; height:100%; }
+        nav { width:92%; max-width:1100px; background:var(--glass); backdrop-filter:blur(20px); border:1px solid var(--border); padding:18px 30px; border-radius:24px; margin-top:20px; display:flex; justify-content:space-between; align-items:center; z-index:10; }
+        .live { color:#22c55e; font-size:0.85rem; font-weight:800; display:flex; align-items:center; gap:10px; }
+        .dot { width:10px; height:10px; background:#22c55e; border-radius:50%; box-shadow:0 0 12px #22c55e; animation:p 2s infinite; }
+        @keyframes p { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+        .container { width:92%; max-width:1100px; display:grid; grid-template-columns: 1.6fr 1fr; gap:25px; margin-top:30px; z-index:10; }
+        .card { background:var(--glass); backdrop-filter:blur(35px); border:1px solid var(--border); border-radius:32px; padding:35px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); }
+        .rank-item { display:flex; align-items:center; gap:15px; padding:18px; background:rgba(255,255,255,0.03); border-radius:22px; margin-bottom:12px; border:1px solid var(--border); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .rank-item:hover { transform: translateX(12px); background:rgba(255,255,255,0.07); }
+        .rank-num { font-weight:800; font-size:1.3rem; width:35px; }
+        .gold { color: #fbbf24; } .silver { color: #94a3b8; } .bronze { color: #b45309; }
+        .count-widget { text-align:center; background: linear-gradient(135deg, rgba(99,102,241,0.2), transparent); }
+        .count-big { font-size:4rem; font-weight:800; color:white; display:block; margin:10px 0; }
+        footer { margin: 40px 0; opacity:0.6; font-size:0.8rem; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <nav>
+        <div style="font-weight:800; letter-spacing:-1px; font-size:1.3rem;">VERKADALA HUB</div>
+        <div class="live"><div class="dot"></div> <span id="on">0</span> ONLINE</div>
+    </nav>
+    <div class="container">
+        <div class="card">
+            <h2 style="margin-bottom:25px; letter-spacing:-1.5px; font-size:1.8rem;">🏆 TOP YAPPER RANKINGS</h2>
+            <div id="lb-list"></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:25px;">
+            <div class="card count-widget">
+                <p style="font-size:0.8rem; opacity:0.6; text-transform:uppercase; letter-spacing:1px;">Counting Game</p>
+                <span class="count-big" id="curr">0</span>
+                <p style="font-size:0.9rem;">Server Highscore: <b id="high" style="color:var(--accent)">0</b></p>
+            </div>
+            <div class="card">
+                <h3 style="font-size:1.1rem; margin-bottom:15px;">Search Member</h3>
+                <input type="text" id="s" placeholder="Username..." oninput="search()" style="width:100%; padding:15px; border-radius:15px; background:rgba(0,0,0,0.4); color:white; border:1px solid var(--border); outline:none;">
+            </div>
+        </div>
+    </div>
+    <footer>Crafted with ❤️ by <b>ruwaidcool</b></footer>
+
+    <script>
+        async function load() {
+            const [sRes, cRes] = await Promise.all([fetch('/api/stats'), fetch('/api/counting')]);
+            const stats = await sRes.json(); const count = await cRes.json();
+            document.getElementById('curr').innerText = count.current;
+            document.getElementById('high').innerText = count.highscore;
+            const list = document.getElementById('lb-list');
+            list.innerHTML = stats.map((u, i) => {
+                let m = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+                return `<div class="rank-item"><div class="rank-num ${m}">${i + 1}</div><div style="flex:1"><b>${u.username}</b><br><small style="opacity:0.5">${u.role}</small></div><div style="font-weight:800; color:var(--accent)">${u.count}</div></div>`;
+            }).join('');
+        }
+        async function online() {
+            const res = await fetch('/api/online'); const data = await res.json();
+            document.getElementById('on').innerText = data.count;
+        }
+        load(); online(); setInterval(load, 15000); setInterval(online, 30000);
+        const c=document.getElementById('canvas'),x=c.getContext('2d');
+        let p=[]; c.width=window.innerWidth; c.height=window.innerHeight;
+        for(let i=0;i<70;i++)p.push({x:Math.random()*c.width,y:Math.random()*c.height,s:Math.random()*1.5,dx:Math.random()*0.3-0.15,dy:Math.random()*0.3-0.15});
+        function a(){x.clearRect(0,0,c.width,c.height);p.forEach(i=>{i.x+=i.dx;i.y+=i.dy;if(i.x>c.width)i.x=0;x.fillStyle="rgba(255,255,255,0.2)";x.beginPath();x.arc(i.x,i.y,i.s,0,Math.PI*2);x.fill()});requestAnimationFrame(a)}a();
+    </script>
+</body>
+</html>
