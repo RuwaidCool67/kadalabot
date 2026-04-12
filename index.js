@@ -5,7 +5,7 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SITE_URL = "https://kadalabot.up.railway.app/"; // Update this to your Railway URL
+const SITE_URL = "https://kadalabot.up.railway.app/"; 
 
 // ================= STORAGE =================
 const STATS_FILE = './userStats.json';
@@ -29,9 +29,12 @@ const saveAll = () => {
 };
 
 const formatTime = (ms) => {
-    const mins = Math.floor(ms / 60000);
+    const totalSeconds = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSeconds / 60);
     const hrs = Math.floor(mins / 60);
-    return hrs > 0 ? `${hrs}h ${mins % 60}m` : `${mins}m`;
+    if (hrs > 0) return `${hrs}h ${mins % 60}m`;
+    if (mins > 0) return `${mins}m ${totalSeconds % 60}s`;
+    return `${totalSeconds % 60}s`;
 };
 
 // ================= MASTER CACHE SYNC =================
@@ -54,13 +57,20 @@ const updateMasterCache = async () => {
 
         const afk = Object.keys(afkUsers).map(id => {
             const mem = guild.members.cache.get(id);
-            return { username: mem ? mem.user.username : "Mamba", reason: afkUsers[id].reason, since: afkUsers[id].time, avatar: mem ? mem.user.displayAvatarURL() : '' };
+            return { username: mem ? mem.user.username : "Kadalai", reason: afkUsers[id].reason, since: afkUsers[id].time };
         });
 
+        // Branding Update: Total Members -> Total Kadalais
         cachedResponse = { 
-            totalMembers: guild.memberCount, yappers, counters, 
-            online: { count: onlineMem.size, members: onlineMem.map(mem => ({ username: mem.user.username, avatar: mem.user.displayAvatarURL() })) },
-            afk, system: { ping: client.ws.ping + "ms", uptime: Math.floor(process.uptime() / 60) + "m" }
+            totalKadalais: guild.memberCount, 
+            yappers, 
+            counters, 
+            onlineKadalais: { 
+                count: onlineMem.size, 
+                members: onlineMem.map(mem => ({ username: mem.user.username, avatar: mem.user.displayAvatarURL() })) 
+            },
+            afk, 
+            system: { ping: client.ws.ping + "ms", uptime: Math.floor(process.uptime() / 60) + "m" }
         };
     } catch (e) { console.log("Cache error"); }
 };
@@ -68,12 +78,12 @@ const updateMasterCache = async () => {
 // ================= WEB API =================
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get("/api/all", (req, res) => res.json(cachedResponse || {}));
-app.listen(PORT, () => console.log(`Dashboard running on ${PORT}`));
+app.listen(PORT, () => console.log(`Verkadala Stop API live on ${PORT}`));
 
 // ================= DISCORD BOT =================
 const client = new Client({ 
     intents: [3276799],
-    presence: { activities: [{ name: 'Ver Kadala Hub', type: ActivityType.Watching }] }
+    presence: { activities: [{ name: 'Verkadala Stop', type: ActivityType.Watching }] }
 });
 
 client.on('ready', () => {
@@ -84,7 +94,7 @@ client.on('ready', () => {
     // 📢 30-MIN AUTO PROMOTER
     setInterval(() => {
         const channel = client.channels.cache.find(c => c.name.includes('general') || c.name.includes('chat'));
-        if (channel) channel.send(`📢 Dei mapla, look our server stats at this link: ${SITE_URL}`);
+        if (channel) channel.send(`📢 Dei mapla, check the Verkadala Stop stats here: ${SITE_URL}`);
     }, 1800000);
 });
 
@@ -108,7 +118,7 @@ client.on('interactionCreate', async interaction => {
         const rolesToRemove = interaction.member.roles.cache.filter(r => allColorNames.includes(r.name));
         if (rolesToRemove.size > 0) await interaction.member.roles.remove(rolesToRemove);
         await interaction.member.roles.add(role);
-        await interaction.editReply(`Vaazhthukkal! Unaku ippo **${selection.name}** color vandhachu! ✨`);
+        await interaction.editReply(`Vaazhthukkal mapla! Unaku ippo **${selection.name}** color vandhachu! ✨`);
     } catch (e) { await interaction.editReply("Manage Roles permission illaiya mamba?"); }
 });
 
@@ -129,7 +139,7 @@ client.on('messageCreate', async message => {
             if (num !== gameData.current + 1 || userId === gameData.lastUser) {
                 message.react('❌');
                 gameData.current = 0; gameData.lastUser = null;
-                message.reply("Gubeer mistake! Resetting to 0.");
+                message.reply("Gubeer mistake! Number wrong. Resetting to 0.");
             } else {
                 message.react('✅');
                 gameData.current = num; gameData.lastUser = userId;
@@ -140,7 +150,18 @@ client.on('messageCreate', async message => {
         }
     }
 
-    // 😴 AFK LOGIC (SHARP MESSAGES)
+    // 😴 AFK LOGIC
+    // 1. If someone PINGS an AFK user
+    if (message.mentions.users.size > 0) {
+        message.mentions.users.forEach(user => {
+            if (afkUsers[user.id]) {
+                const timeAway = formatTime(Date.now() - afkUsers[user.id].time);
+                message.reply(`Dei mamba, **${user.username}** AFK-la irukan! He's been away for **${timeAway}** for: **${afkUsers[user.id].reason}**.`);
+            }
+        });
+    }
+
+    // 2. Welcome Back
     if (afkUsers[userId] && !content.startsWith('kadala afk')) {
         const duration = formatTime(Date.now() - afkUsers[userId].time);
         const reason = afkUsers[userId].reason;
@@ -149,6 +170,7 @@ client.on('messageCreate', async message => {
         return message.reply(`Welcome back! Nee **${duration}** ah **${reason}** nu sollitu poiruntha.`);
     }
 
+    // 3. Set AFK
     if (content.startsWith('kadala afk')) {
         const r = message.content.split(/afk/i)[1]?.trim() || "No reason";
         afkUsers[userId] = { time: Date.now(), reason: r };
