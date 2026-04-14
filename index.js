@@ -62,18 +62,16 @@ app.get("/api/all", (req, res) => res.json(cachedResponse || {}));
 app.listen(PORT, () => console.log(`Verkadala Stop API live`));
 
 // ================= DISCORD BOT =================
-const client = new Client({ intents: [3276799] });
+const client = new Client({ 
+    intents: [3276799],
+    // GLOBAL FIX: Bot will never trigger a mention when replying/sending text
+    allowedMentions: { parse: [], repliedUser: false } 
+});
 
 client.on('ready', () => {
-    console.log(`Kadala Watchman v24_c (Silent Snitch) online!`);
+    console.log(`Kadala Watchman v24_d (Anti-Exploit) online!`);
     updateMasterCache();
     setInterval(updateMasterCache, 30000);
-
-    // 📢 30-MIN PROMOTER
-    setInterval(() => {
-        const channel = client.channels.cache.get(PROMO_CHANNEL_ID);
-        if (channel) channel.send(`📢 Dei mapla, check the Verkadala Stop stats here: ${SITE_URL}`);
-    }, 1800000);
 });
 
 // Color Role Setup
@@ -90,7 +88,7 @@ client.on('interactionCreate', async i => {
         await i.member.roles.remove(i.member.roles.cache.filter(r => names.includes(r.name)));
         await i.member.roles.add(role);
         await i.editReply(`You are now **${choice.name}**! ✨`);
-    } catch (e) { await i.editReply("Manage Roles permission illaiya mamba?"); }
+    } catch (e) { await i.editReply("Role error."); }
 });
 
 client.on('messageCreate', async message => {
@@ -98,7 +96,15 @@ client.on('messageCreate', async message => {
     const userId = message.author.id;
     const content = message.content;
 
-    const sanitize = (str, limit = 100) => str.replace(/[\n\r]/g, " ").substring(0, limit);
+    // --- HARD SANITIZER (NUKES ALL PINGS & SYMBOLS) ---
+    const sanitize = (str, limit = 100) => {
+        return str
+            .replace(/<@!?&?\d+>|@everyone|@here/g, "") // Removes Discord mention strings
+            .replace(/@/g, "") // Removes raw @ symbols to prevent ghost-pings
+            .replace(/[\n\r]/g, " ") // Removes line breaks
+            .trim()
+            .substring(0, limit);
+    };
 
     // Chat capture for site
     latestMessages.unshift({
@@ -113,22 +119,23 @@ client.on('messageCreate', async message => {
     if (!userStats[userId]) userStats[userId] = { username: message.author.username, count: 0 };
     userStats[userId].count++;
 
-    // 😴 AFK SYSTEM (SILENT SNITCH)
+    // 😴 AFK SYSTEM (SECURE)
     if (message.mentions.users.size > 0) {
-        // Find FIRST mentioned user who is AFK
         const firstAFK = message.mentions.users.find(u => afkUsers[u.id]);
         if (firstAFK) {
             const timeAway = formatTime(Date.now() - afkUsers[firstAFK.id].time);
-            // USES BOLD NAME INSTEAD OF @ PING
+            // Uses Bold Username (Safe)
             message.reply(`Dei mamba, **${firstAFK.username}** afk pointen! Nee **${timeAway}** ah **${afkUsers[firstAFK.id].reason}** nu sollitu poiruntha.`);
         }
     }
 
     if (content.toLowerCase().startsWith('kadala afk')) {
-        const r = sanitize(content.split(/afk/i)[1]?.trim() || "No reason", 50);
-        afkUsers[userId] = { time: Date.now(), reason: r };
+        const rawReason = content.split(/afk/i)[1]?.trim() || "No reason";
+        const cleanReason = sanitize(rawReason, 50); // Mentions stripped here!
+        
+        afkUsers[userId] = { time: Date.now(), reason: cleanReason };
         saveAll();
-        return message.channel.send(`afk pointen: ${r}`);
+        return message.channel.send(`afk pointen: ${cleanReason}`);
     }
 
     if (afkUsers[userId] && !content.toLowerCase().startsWith('kadala afk')) {
