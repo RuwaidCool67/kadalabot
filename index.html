@@ -8,7 +8,7 @@
     <style>
         :root { 
             --bg: #000000; 
-            --m3-surface: rgba(18, 18, 18, 0.75); 
+            --m3-surface: rgba(18, 18, 18, 0.8); 
             --m3-accent: #38bdf8; 
             --m3-on-surface: #ffffff;
             --m3-border: rgba(255, 255, 255, 0.1);
@@ -19,53 +19,65 @@
         
         body { background: var(--bg); color: var(--m3-on-surface); min-height: 100vh; overflow-x: hidden; }
 
-        .ambient-glow { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% -20%, rgba(56, 189, 248, 0.2), transparent 70%); }
+        .ambient-glow { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% -20%, rgba(56, 189, 248, 0.15), transparent 70%); }
 
-        /* --- NAV --- */
+        /* --- NAVIGATION --- */
         nav { 
-            width: 94%; max-width: 850px; background: rgba(12, 12, 12, 0.85); backdrop-filter: blur(50px); border: 1px solid var(--m3-border); 
-            padding: 10px; position: fixed; top: 25px; left: 50%; transform: translateX(-50%); z-index: 1000; border-radius: 100px; 
+            width: 92%; max-width: 800px; background: rgba(12, 12, 12, 0.9); backdrop-filter: blur(50px); border: 1px solid var(--m3-border); 
+            padding: 8px; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; border-radius: 100px; 
             display: flex; justify-content: space-around; align-items: center; 
         }
-        .nav-link { padding: 12px 22px; font-size: 0.8rem; font-weight: 500; color: #71717a; cursor: pointer; border-radius: 100px; transition: 0.4s; }
+        .nav-link { padding: 12px 20px; font-size: 0.8rem; font-weight: 500; color: #71717a; cursor: pointer; border-radius: 100px; transition: 0.3s; }
         .nav-link.active { background: var(--m3-accent); color: #000; font-weight: 700; }
 
         /* --- CONTAINER --- */
-        .container { padding: 140px 6% 120px; max-width: 1500px; margin: 0 auto; }
-        .page { display: none; opacity: 0; transform: translateY(15px); transition: 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .container { padding: 120px 6% 100px; max-width: 1400px; margin: 0 auto; }
+        .page { display: none; opacity: 0; transform: translateY(10px); transition: 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .page.active { display: block; opacity: 1; transform: translateY(0); }
 
         /* --- HERO --- */
-        .hero-title { font-size: clamp(3rem, 10vw, 8rem); font-weight: 900; line-height: 0.85; letter-spacing: -6px; margin-bottom: 20px; }
+        .hero-title { font-size: clamp(2.8rem, 9vw, 7.5rem); font-weight: 900; line-height: 0.9; letter-spacing: -6px; margin-bottom: 20px; }
         .hero-title span { color: var(--m3-accent); }
-        .hero-desc { font-size: 1.4rem; font-weight: 500; color: #a1a1aa; max-width: 900px; line-height: 1.3; margin-bottom: 40px; }
+        .hero-desc { font-size: 1.3rem; font-weight: 500; color: #a1a1aa; max-width: 850px; line-height: 1.4; margin-bottom: 40px; }
 
-        .m3-card { background: var(--m3-surface); backdrop-filter: blur(40px); border: 1px solid var(--m3-border); border-radius: var(--radius-xl); padding: 50px; margin-bottom: 25px; }
-        .card-label { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: var(--m3-accent); letter-spacing: 3px; margin-bottom: 25px; display: block; }
+        /* --- CARDS --- */
+        .m3-card { background: var(--m3-surface); backdrop-filter: blur(40px); border: 1px solid var(--m3-border); border-radius: var(--radius-xl); padding: 45px 35px; margin-bottom: 25px; overflow: hidden; }
+        .card-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--m3-accent); letter-spacing: 3px; margin-bottom: 25px; display: block; }
+        
+        /* Stats Styling */
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .huge-stat { font-size: 5.5rem; font-weight: 900; letter-spacing: -7px; line-height: 1; font-variant-numeric: tabular-nums; }
 
-        /* --- ANIMATED STATS --- */
-        .huge-stat { font-size: 6rem; font-weight: 900; letter-spacing: -8px; line-height: 1; font-variant-numeric: tabular-nums; }
-
-        /* --- BOT SECTION --- */
-        .cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .cmd-item { padding: 30px; background: rgba(255,255,255,0.03); border-radius: 35px; border: 1px solid transparent; }
-        .cmd-item b { font-size: 1.2rem; color: var(--m3-accent); display: block; margin-bottom: 10px; font-weight: 700; }
-        .cmd-item p { font-size: 0.95rem; color: #888; font-weight: 500; line-height: 1.5; }
+        /* --- JOIN CARD (FIXED) --- */
+        .join-card { 
+            text-align: center; background: var(--m3-accent); color: #000; 
+            padding: 60px 30px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .join-card h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; letter-spacing: -2px; margin-bottom: 10px; }
+        .join-card p { font-weight: 700; font-size: 1.1rem; margin-bottom: 30px; opacity: 0.8; }
 
         /* --- LISTS --- */
-        .list-item { display: flex; align-items: center; gap: 20px; padding: 22px; background: rgba(255,255,255,0.03); border-radius: 35px; margin-bottom: 12px; }
-        .avatar { width: 55px; height: 55px; border-radius: 50%; border: 3px solid var(--m3-accent); object-fit: cover; }
+        .list-wrap { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; max-height: 600px; overflow-y: auto; padding-right: 10px; }
+        .list-item { display: flex; align-items: center; gap: 15px; padding: 18px; background: rgba(255,255,255,0.04); border-radius: 30px; border: 1px solid transparent; }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; border: 2.5px solid var(--m3-accent); object-fit: cover; }
+
+        /* --- BOT SECTION --- */
+        .cmd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+        .cmd-item { padding: 30px; background: rgba(255,255,255,0.03); border-radius: 35px; }
+        .cmd-item b { font-size: 1.2rem; color: var(--m3-accent); display: block; margin-bottom: 10px; }
+        .cmd-item p { font-size: 0.9rem; color: #888; line-height: 1.5; font-weight: 500; }
 
         /* --- BUTTONS --- */
-        .btn { display: inline-block; padding: 22px 60px; border-radius: 100px; text-decoration: none; font-weight: 700; font-size: 1.1rem; transition: 0.4s; }
-        .btn-main { background: var(--m3-accent); color: #000; }
-        .btn-join { background: #ffffff; color: #000000; margin-top: 10px; }
-        .btn:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(56, 189, 248, 0.2); }
+        .btn { display: inline-block; padding: 20px 50px; border-radius: 100px; text-decoration: none; font-weight: 800; font-size: 1rem; transition: 0.4s; text-align: center; }
+        .btn-main { background: var(--m3-accent); color: #000; border: none; }
+        .btn-black { background: #000; color: #fff; border: none; }
+        .btn-ghost { background: transparent; color: #fff; border: 1px solid #333; margin-left: 10px; }
+        .btn:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(56, 189, 248, 0.2); }
 
-        footer { text-align: center; padding: 60px 20px; font-size: 0.75rem; color: #444; letter-spacing: 5px; font-weight: 700; text-transform: uppercase; }
+        footer { text-align: center; padding: 60px 20px; font-size: 0.7rem; color: #444; letter-spacing: 5px; font-weight: 700; text-transform: uppercase; }
 
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #222; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -82,73 +94,75 @@
     <div class="container">
         <div id="page-home" class="page active">
             <h1 class="hero-title">Absolute <span>Freedom.</span><br>Tamil Community.</h1>
-            <p class="hero-desc">Verkadala Stop is a sanctuary for the bloods. High-energy bitching, free expression, and pure community gossip. No drama, just Kadalai.</p>
+            <p class="hero-desc">Verkadala Stop is the sanctuary for real ones. High-energy bitching, zero censorship, and pure community gossip. No drama, just Kadalai.</p>
             
-            <div style="margin-bottom: 60px;">
+            <div style="margin-bottom: 60px; display: flex; flex-wrap: wrap; gap: 10px;">
                 <a href="https://discord.com/invite/7C6wX7cFDw" target="_blank" class="btn btn-main">JOIN NOW</a>
-                <a href="https://github.com/RUWAIDNIZAM/kadalabot" target="_blank" class="btn" style="color:white; border: 1px solid #333; margin-left:10px;">SOURCE CODE</a>
+                <a href="https://github.com/RUWAIDNIZAM/kadalabot" target="_blank" class="btn btn-ghost">SOURCE CODE</a>
             </div>
 
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 40px;">
-                <div class="m3-card" style="padding:45px;">
+            <div class="stat-grid">
+                <div class="m3-card" style="margin-bottom:0;">
                     <span class="card-label">Total Kadalais</span>
                     <h1 class="huge-stat" id="home-total">0</h1>
                 </div>
-                <div class="m3-card" style="padding:45px;">
+                <div class="m3-card" style="margin-bottom:0;">
                     <span class="card-label">Online Now</span>
                     <h1 class="huge-stat" id="home-on" style="color:var(--m3-accent)">0</h1>
                 </div>
             </div>
+
+            <div class="m3-card join-card">
+                <h2>Become a Kadalai.</h2>
+                <p>Join hundreds of others in the chillest Tamil server.</p>
+                <a href="https://discord.com/invite/7C6wX7cFDw" target="_blank" class="btn btn-black">LAUNCH DISCORD</a>
+            </div>
         </div>
 
         <div id="page-bot" class="page">
-            <h1 class="hero-title" style="font-size: 4rem; letter-spacing: -4px;">Built for <span>Service.</span></h1>
+            <h1 class="hero-title" style="font-size: 3.5rem; letter-spacing: -4px;">Built for <span>Service.</span></h1>
             <div class="m3-card">
-                <span class="card-label">Server Utility Commands</span>
+                <span class="card-label">Bot Command Menu</span>
                 <div class="cmd-grid">
-                    <div class="cmd-item"><b>kadala afk [reason]</b><p>Ghost mode. Silent notifications for name-pings.</p></div>
-                    <div class="cmd-item"><b>kadala setup color</b><p>Admin only. Interactive role panel deployment.</p></div>
-                    <div class="cmd-item"><b>Smart Counting</b><p>Logic-based counting resets on errors.</p></div>
-                    <div class="cmd-item"><b>At a Glance Sync</b><p>Live Discord gossip logs mirrored to this site.</p></div>
+                    <div class="cmd-item"><b>kadala afk [reason]</b><p>Silent ghost mode. The bot handles all name-pings so your bitching isn't disturbed.</p></div>
+                    <div class="cmd-item"><b>kadala setup color</b><p>Admin utility. Deploys the interactive role panel for instant customization.</p></div>
+                    <div class="cmd-item"><b>Smart Counting</b><p>Automated game logic in #counting. Resets on double-posts or math errors.</p></div>
+                    <div class="cmd-item"><b>API Gossip Sync</b><p>Mirrors live Discord gossip logs directly to this website's Stats page.</p></div>
                 </div>
             </div>
         </div>
 
         <div id="page-stats" class="page">
             <div class="m3-card">
-                <span class="card-label">🟢 Online Members</span>
-                <div id="online-list" class="cmd-grid" style="max-height:500px; overflow-y:auto;"></div>
+                <span class="card-label">🟢 All Online Kadalais</span>
+                <div id="online-list" class="list-wrap"></div>
             </div>
             <div class="m3-card">
-                <span class="card-label">🏆 Top Bitchers</span>
+                <span class="card-label">🏆 Top Bitchers (Most Active)</span>
                 <div id="yapper-list"></div>
             </div>
             <div class="m3-card">
                 <span class="card-label">💬 Recent Server Gossip</span>
                 <div id="at-glance-feed"></div>
             </div>
-            <div class="m3-card">
-                <span class="card-label">😴 AFK Tracking</span>
-                <div id="afk-list"></div>
-            </div>
         </div>
 
         <div id="page-join" class="page">
-            <div class="m3-card" style="text-align:center; padding: 120px 20px; background: var(--m3-accent); color:#000;">
-                <h1 style="font-size: 4.5rem; font-weight:900; letter-spacing:-4px;">Jump In.</h1>
-                <p style="font-weight: 700; margin: 20px 0;">Join hundreds of others in the pool.</p>
-                <a href="https://discord.com/invite/7C6wX7cFDw" target="_blank" class="btn" style="background:#000; color:#fff;">LAUNCH DISCORD</a>
+            <div class="m3-card" style="text-align:center; padding: 120px 20px; background: #0a0a0a;">
+                <h1 class="hero-title" style="font-size: 4.5rem; letter-spacing: -5px;">Jump In.</h1>
+                <p style="font-weight: 500; font-size: 1.3rem; margin-bottom: 40px; color: #666;">Ready to gossip? The pool is open.</p>
+                <a href="https://discord.com/invite/7C6wX7cFDw" target="_blank" class="btn btn-main" style="padding: 25px 80px;">OPEN DISCORD</a>
             </div>
         </div>
 
         <div id="page-credits" class="page">
             <div class="m3-card">
-                <span class="card-label">The Visionary</span>
-                <h1 class="hero-title" style="font-size: 4rem; letter-spacing: -4px;">Coded by <span>ruwaidcool.</span></h1>
-                <p style="font-size: 1.5rem; color: #888; font-weight: 500; line-height: 1.5; margin: 30px 0;">
-                    Engineered by **Ruwaid Nizam**. Open-source community vibes.
+                <span class="card-label">The Architect</span>
+                <h1 class="hero-title" style="font-size: 3.5rem; letter-spacing: -4px;">Coded by <span>ruwaidcool.</span></h1>
+                <p style="font-size: 1.4rem; color: #888; font-weight: 500; line-height: 1.5; margin: 30px 0;">
+                    Designed and engineered by **Ruwaid Nizam (@ruwaidcool)**. This is a 100% open-source project dedicated to the community.
                 </p>
-                <a href="https://github.com/RUWAIDNIZAM/kadalabot" target="_blank" style="color:var(--m3-accent); text-decoration:none; font-weight:700;">GITHUB REPO ↗</a>
+                <a href="https://github.com/RUWAIDNIZAM/kadalabot" target="_blank" class="btn btn-ghost" style="margin:0;">VIEW REPOSITORY ↗</a>
             </div>
         </div>
     </div>
@@ -156,18 +170,15 @@
     <footer>POWERED BY RUWAIDCOOL SOFTWARE | 2026</footer>
 
     <script>
-        // --- APPLE STYLE NUMBER ANIMATION ---
+        // --- APPLE STYLE COUNTER ANIMATION ---
         function animateValue(obj, start, end, duration) {
             let startTimestamp = null;
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                // Ease Out Cubic function
-                const easeValue = 1 - Math.pow(1 - progress, 3);
+                const easeValue = 1 - Math.pow(1 - progress, 3); // Ease Out Cubic
                 obj.innerHTML = Math.floor(easeValue * (end - start) + start);
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                }
+                if (progress < 1) window.requestAnimationFrame(step);
             };
             window.requestAnimationFrame(step);
         }
@@ -186,39 +197,34 @@
         function render(data) {
             if(!data) return;
 
-            // Trigger Animations for stats
-            const totalEl = document.getElementById('home-total');
-            const onlineEl = document.getElementById('home-on');
-
-            animateValue(totalEl, lastTotal, data.totalKadalais || 0, 1500);
-            animateValue(onlineEl, lastOnline, data.onlineKadalais?.count || 0, 1500);
-
+            // Stats Animation
+            const tEl = document.getElementById('home-total');
+            const oEl = document.getElementById('home-on');
+            animateValue(tEl, lastTotal, data.totalKadalais || 0, 1500);
+            animateValue(oEl, lastOnline, data.onlineKadalais?.count || 0, 1500);
             lastTotal = data.totalKadalais || 0;
             lastOnline = data.onlineKadalais?.count || 0;
             
-            // List rendering
+            // Unlimited Online List
             document.getElementById('online-list').innerHTML = (data.onlineKadalais?.members || []).map(m => `
-                <div class="list-item" style="background:none; border: 1px solid rgba(255,255,255,0.05);">
+                <div class="list-item" style="background:none; border: 1px solid rgba(255,255,255,0.06);">
                     <img src="${m.avatar}" class="avatar">
-                    <b style="font-weight:700;">${m.username}</b>
+                    <b style="font-weight:700; font-size:0.95rem;">${m.username}</b>
                 </div>`).join('');
 
+            // Bitcher Rankings
             document.getElementById('yapper-list').innerHTML = (data.bitchers || []).map(u => `
                 <div class="list-item">
                     <img src="${u.avatar}" class="avatar">
                     <div style="flex:1;"><b style="font-weight:700;">${u.username}</b></div>
-                    <span style="font-weight:900; font-size:1.8rem; color:var(--m3-accent);">${u.count}</span>
+                    <span style="font-weight:900; font-size:1.6rem; color:var(--m3-accent);">${u.count}</span>
                 </div>`).join('');
 
+            // Gossip Feed
             document.getElementById('at-glance-feed').innerHTML = (data.chat || []).map(m => `
-                <div class="list-item" style="border-radius: 30px;">
+                <div class="list-item" style="border-radius: 25px; margin-bottom: 10px;">
                     <div style="flex-grow:1;"><b style="font-weight:700;">${m.author}</b><br><small style="font-weight:500; color:#888">${m.content}</small></div>
                 </div>`).join('');
-
-            document.getElementById('afk-list').innerHTML = (data.afk || []).map(u => `
-                <div class="list-item">
-                    <div><b style="font-weight:700;">${u.username}</b><br><small style="color:#fbbf24; font-weight:500;">"${u.reason}"</small></div>
-                </div>`).join('') || '<p style="opacity:0.5; padding:20px;">All bloods active.</p>';
         }
 
         async function fetchAll() {
@@ -226,7 +232,7 @@
                 const res = await fetch('/api/all');
                 const data = await res.json();
                 render(data);
-            } catch(e) { console.log("Updating..."); }
+            } catch(e) { console.log("Sync..."); }
         }
         fetchAll(); setInterval(fetchAll, 30000);
     </script>
