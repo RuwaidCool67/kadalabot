@@ -29,7 +29,7 @@
 
         .ambient-glow { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% -20%, rgba(56, 189, 248, 0.12), transparent 75%); }
 
-        /* --- FLOATING BOTTOM NAV --- */
+        /* --- NAVIGATION DOCK --- */
         nav { 
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             width: 94%; max-width: 500px; height: 70px;
@@ -53,7 +53,7 @@
         .page.active { display: block; animation: pageIn 0.5s ease forwards; }
         @keyframes pageIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- CARDS & STATS --- */
+        /* --- UI COMPONENTS --- */
         .hero-title { font-size: clamp(2.5rem, 8vw, 6.5rem); font-weight: 900; line-height: 0.9; letter-spacing: -3px; margin-bottom: 20px; }
         .hero-title span { color: var(--accent); }
 
@@ -62,7 +62,7 @@
         
         .huge-stat { font-size: 4.5rem; font-weight: 900; letter-spacing: -4px; line-height: 1; color: white; font-variant-numeric: tabular-nums; }
 
-        /* --- BUBBLE PHYSICS --- */
+        /* --- INTERACTIVE CIRCLE (FIXED COLLISION) --- */
         #circle-container {
             width: 100%; height: 500px; position: relative;
             background: rgba(255,255,255,0.02); border-radius: 40px;
@@ -73,6 +73,7 @@
             position: absolute; border-radius: 50%;
             background-size: cover; background-position: center;
             border: 2px solid var(--accent);
+            display: flex; align-items: center; justify-content: center;
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             will-change: transform; cursor: grab;
         }
@@ -80,9 +81,10 @@
         .bubble-name { 
             position: absolute; bottom: -22px; font-size: 0.55rem; 
             font-weight: 800; color: #fff; white-space: nowrap;
-            background: rgba(0,0,0,0.8); padding: 2px 6px; border-radius: 6px;
-            pointer-events: none; opacity: 0.8;
+            background: rgba(0,0,0,0.8); padding: 2px 6px; border-radius: 8px;
+            pointer-events: none; opacity: 0; transition: 0.3s;
         }
+        .bubble-pfp:hover .bubble-name { opacity: 1; }
 
         .btn-flex { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 40px; }
         .btn { padding: 18px 35px; border-radius: 100px; text-decoration: none; font-weight: 800; font-size: 0.9rem; text-align: center; flex: 1; min-width: 150px; transition: 0.3s; }
@@ -116,7 +118,7 @@
     <div class="container">
         <div id="page-home" class="page active">
             <h1 class="hero-title">Absolute <span>Freedom.</span><br>Tamil Community.</h1>
-            <p style="color:var(--text-dim); margin-bottom:30px; font-size:1.1rem;">Verkadala Stop is a sanctuary for the bloods. Connect, bitch, and gossip together respectfully.</p>
+            <p style="color:var(--text-dim); margin-bottom:30px; font-size:1.1rem;">The central hub for the bloods. Connect, bitch, and gossip together respectfully. No censorship, just Kadalai.</p>
 
             <div class="btn-flex">
                 <a href="https://discord.com/invite/7C6wX7cFDw" target="_blank" class="btn btn-main">JOIN NOW</a>
@@ -139,7 +141,8 @@
             <h1 class="hero-title" style="font-size: 3rem;">The <span>Code.</span></h1>
             <div class="m3-card">
                 <div class="rule-item"><b>Respect</b><p>No hate, harassment, or discrimination.</p></div>
-                <div class="rule-item"><b>NSFW/Gore</b><p>Strictly banned.</p></div>
+                <div class="rule-item"><b>NSFW/Gore</b><p>Strictly banned (CSAM = instant ban).</p></div>
+                <div class="rule-item"><b>DMs</b><p>Don’t DM without permission.</p></div>
                 <div class="rule-item"><b>Moderation</b><p>Discord ToS applies at all times.</p></div>
             </div>
         </div>
@@ -147,15 +150,16 @@
         <div id="page-bot" class="page">
             <h1 class="hero-title" style="font-size: 3rem;">The <span>Bot.</span></h1>
             <div class="m3-card">
-                <div class="rule-item"><b>kadala afk</b><p>Enter ghost mode bitching silently.</p></div>
+                <div class="rule-item"><b>kadala afk</b><p>Silence pings for silent bitching.</p></div>
+                <div class="rule-item"><b>setup color</b><p>Deploy role selector panel.</p></div>
                 <div class="rule-item"><b>Gossip Sync</b><p>Real-time mirroring enabled.</p></div>
             </div>
         </div>
 
         <div id="page-stats" class="page">
             <div class="m3-card">
-                <span class="card-label">🟢 Online Circle Feature</span>
-                <p style="font-size: 0.8rem; opacity: 0.5; margin-bottom: 15px;">Flick members around. Grab and toss for gravity fun.</p>
+                <span class="card-label">🟢 Interactive Online Circle</span>
+                <p style="font-size: 0.8rem; opacity: 0.5; margin-bottom: 15px;">Flick members around. Grab and toss to gossip.</p>
                 <div id="circle-container"></div>
             </div>
             <div class="m3-card">
@@ -168,7 +172,7 @@
             <div class="m3-card" style="text-align: center;">
                 <span class="card-label">Powered by Ruwaidcool Software</span>
                 <h1 class="hero-title" style="font-size: 3.5rem;">ruwaidcool.</h1>
-                <p style="margin-bottom: 30px; color: var(--text-dim);">Engineered by **Ruwaid Nizam**. Open source pride.</p>
+                <p style="margin-bottom: 30px; color: var(--text-dim);">Engineered for the Tamil community 2026.</p>
                 <a href="https://github.com/RUWAIDNIZAM/kadalabot" target="_blank" class="btn btn-ghost" style="width: auto; flex: none;">GITHUB REPO ↗</a>
             </div>
         </div>
@@ -177,12 +181,14 @@
     <footer>POWERED BY RUWAIDCOOL SOFTWARE | 2026</footer>
 
     <script>
+        // --- APPLE REPLAY STYLE ANIMATION ---
         function animateValue(obj, start, end, duration) {
             let startTimestamp = null;
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                obj.innerHTML = Math.floor((1 - Math.pow(1 - progress, 3)) * (end - start) + start);
+                const current = Math.floor((1 - Math.pow(1 - progress, 3)) * (end - start) + start);
+                obj.innerHTML = current;
                 if (progress < 1) window.requestAnimationFrame(step);
             };
             window.requestAnimationFrame(step);
@@ -195,21 +201,41 @@
         let mouse = { x: 0, y: 0 };
         const container = document.getElementById('circle-container');
 
+        // Physics Logic
         function updatePhysics() {
             if(!physicsActive) return;
             bubbles.forEach(b => {
                 if (b === draggedBubble) {
-                    b.vx = (mouse.x - b.r - b.x) * 0.2;
-                    b.vy = (mouse.y - b.r - b.y) * 0.2;
+                    b.vx = (mouse.x - b.r - b.x) * 0.25;
+                    b.vy = (mouse.y - b.r - b.y) * 0.25;
                 } else {
                     b.vx *= 0.98; b.vy *= 0.98;
-                    b.vx += (Math.random() - 0.5) * 0.04;
+                    b.vx += (Math.random() - 0.5) * 0.05;
                 }
+
                 b.x += b.vx; b.y += b.vy;
+
+                // Wall Collision
                 if (b.x <= 0) { b.x = 0; b.vx *= -0.8; }
                 if (b.x + b.r * 2 >= container.clientWidth) { b.x = container.clientWidth - b.r * 2; b.vx *= -0.8; }
                 if (b.y <= 0) { b.y = 0; b.vy *= -0.8; }
                 if (b.y + b.r * 2 >= container.clientHeight) { b.y = container.clientHeight - b.r * 2; b.vy *= -0.8; }
+
+                // Bubble-to-Bubble Collision (Prevents Clumping)
+                bubbles.forEach(b2 => {
+                    if (b === b2) return;
+                    const dx = (b.x + b.r) - (b2.x + b2.r);
+                    const dy = (b.y + b.r) - (b2.y + b2.r);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = b.r + b2.r;
+                    if (dist < minDist) {
+                        const angle = Math.atan2(dy, dx);
+                        const push = (minDist - dist) * 0.05;
+                        b.vx += Math.cos(angle) * push;
+                        b.vy += Math.sin(angle) * push;
+                    }
+                });
+
                 b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
             });
             requestAnimationFrame(updatePhysics);
@@ -219,8 +245,7 @@
             if(container.clientWidth === 0) return;
             container.innerHTML = ''; bubbles = [];
             members.forEach(m => {
-                // --- RANDOM SIZES (50px to 120px) ---
-                const size = Math.floor(Math.random() * 70) + 50; 
+                const size = Math.floor(Math.random() * 50) + 60; // Random sizes 60px to 110px
                 const div = document.createElement('div');
                 div.className = 'bubble-pfp';
                 div.style.width = size + 'px'; div.style.height = size + 'px';
@@ -247,9 +272,11 @@
             document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
             document.getElementById('page-' + id).classList.add('active');
             el.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
             if(id === 'stats') {
                 physicsActive = true;
-                setTimeout(() => { if(cachedData) createBubbles(cachedData.onlineKadalais.members); }, 100);
+                setTimeout(() => { if(cachedData) createBubbles(cachedData.onlineKadalais.members); }, 150);
             } else { physicsActive = false; }
         }
 
@@ -273,8 +300,9 @@
                 const res = await fetch('/api/all');
                 const data = await res.json();
                 render(data);
-            } catch(e) { console.log("Sync..."); }
+            } catch(e) { console.log("Sync error..."); }
         }
+
         fetchAll(); setInterval(fetchAll, 30000);
         updatePhysics();
     </script>
