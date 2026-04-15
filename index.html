@@ -14,7 +14,6 @@
             --text-dim: #a1a1aa;
             --border: rgba(255, 255, 255, 0.1);
             --radius-xl: 32px;
-            /* FIXED SPACING */
             --ls: 0.8px; 
             --lh: 1.4;
         }
@@ -22,17 +21,15 @@
         * { margin:0; padding:0; box-sizing:border-box; font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
         
         body { 
-            background: var(--bg); 
-            color: var(--text-main); 
-            min-height: 100vh; 
-            overflow-x: hidden;
-            line-height: var(--lh);
-            letter-spacing: var(--ls);
+            background: var(--bg); color: var(--text-main); 
+            min-height: 100vh; overflow-x: hidden;
+            line-height: var(--lh); letter-spacing: var(--ls);
+            user-select: none;
         }
 
-        .ambient-glow { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% -20%, rgba(56, 189, 248, 0.1), transparent 75%); }
+        .ambient-glow { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% -20%, rgba(56, 189, 248, 0.12), transparent 75%); }
 
-        /* --- FLOATING BOTTOM DOCK --- */
+        /* --- FLOATING BOTTOM NAV --- */
         nav { 
             position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
             width: 94%; max-width: 500px; height: 70px;
@@ -51,65 +48,56 @@
         .nav-link.active { color: var(--accent); }
 
         /* --- CONTAINER --- */
-        .container { padding: 50px 6% 140px; max-width: 1400px; margin: 0 auto; }
+        .container { padding: 40px 6% 140px; max-width: 1400px; margin: 0 auto; }
         .page { display: none; opacity: 0; }
-        .page.active { display: block; animation: pageIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-        @keyframes pageIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .page.active { display: block; animation: pageIn 0.5s ease forwards; }
+        @keyframes pageIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- HERO & FONTS --- */
-        .hero-title { font-size: clamp(2.8rem, 10vw, 7rem); font-weight: 900; line-height: 0.9; letter-spacing: -3px; margin-bottom: 25px; }
+        /* --- CARDS & STATS --- */
+        .hero-title { font-size: clamp(2.5rem, 8vw, 6.5rem); font-weight: 900; line-height: 0.9; letter-spacing: -3px; margin-bottom: 20px; }
         .hero-title span { color: var(--accent); }
-        .hero-desc { font-size: 1.2rem; font-weight: 500; color: var(--text-dim); max-width: 800px; margin-bottom: 40px; }
 
-        .m3-card { 
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: var(--radius-xl); padding: 40px 30px; margin-bottom: 20px;
-        }
-        .card-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--accent); letter-spacing: 4px; margin-bottom: 20px; display: block; }
+        .m3-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: 35px 25px; margin-bottom: 20px; }
+        .card-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--accent); letter-spacing: 3px; margin-bottom: 20px; display: block; }
         
-        /* APPLE STYLE STAT ANIMATION */
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .huge-stat { 
-            font-size: 4.5rem; font-weight: 900; letter-spacing: -4px; line-height: 1; 
-            color: white; font-variant-numeric: tabular-nums; /* Prevents jumping */
-        }
+        .huge-stat { font-size: 4.5rem; font-weight: 900; letter-spacing: -4px; line-height: 1; color: white; font-variant-numeric: tabular-nums; }
 
-        /* --- ONLINE CIRCLE --- */
+        /* --- BUBBLE PHYSICS --- */
         #circle-container {
-            width: 100%; height: 450px; position: relative;
+            width: 100%; height: 500px; position: relative;
             background: rgba(255,255,255,0.02); border-radius: 40px;
             overflow: hidden; border: 1px solid var(--border);
+            touch-action: none;
         }
         .bubble-pfp {
             position: absolute; border-radius: 50%;
             background-size: cover; background-position: center;
             border: 2px solid var(--accent);
-            display: flex; align-items: center; justify-content: center;
             box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            will-change: transform; cursor: grab;
         }
+        .bubble-pfp:active { cursor: grabbing; border-color: #fff; z-index: 100; }
         .bubble-name { 
-            position: absolute; bottom: -22px; font-size: 0.6rem; 
+            position: absolute; bottom: -22px; font-size: 0.55rem; 
             font-weight: 800; color: #fff; white-space: nowrap;
-            background: rgba(0,0,0,0.8); padding: 2px 8px; border-radius: 8px;
+            background: rgba(0,0,0,0.8); padding: 2px 6px; border-radius: 6px;
+            pointer-events: none; opacity: 0.8;
         }
 
-        /* Buttons */
         .btn-flex { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 40px; }
-        .btn { padding: 20px 40px; border-radius: 100px; text-decoration: none; font-weight: 800; font-size: 1rem; text-align: center; flex: 1; min-width: 160px; transition: 0.4s; }
+        .btn { padding: 18px 35px; border-radius: 100px; text-decoration: none; font-weight: 800; font-size: 0.9rem; text-align: center; flex: 1; min-width: 150px; transition: 0.3s; }
         .btn-main { background: var(--accent); color: #000; }
         .btn-ghost { background: transparent; color: #fff; border: 1px solid #333; }
-        .btn:hover { transform: scale(1.02); box-shadow: 0 10px 20px rgba(56, 189, 248, 0.2); }
 
-        /* Rules */
-        .rule-item { padding: 20px; background: rgba(255,255,255,0.03); border-radius: 24px; margin-bottom: 12px; border-left: 4px solid var(--accent); }
-        .rule-item b { display: block; color: var(--accent); font-size: 0.9rem; margin-bottom: 5px; }
-        .rule-item p { font-size: 0.9rem; color: #d1d1d1; }
+        .rule-item { padding: 15px; background: rgba(255,255,255,0.03); border-radius: 20px; margin-bottom: 10px; border-left: 3px solid var(--m3-accent); }
+        .rule-item b { color: var(--accent); font-size: 0.85rem; display: block; margin-bottom: 4px; }
+        .rule-item p { font-size: 0.85rem; color: #ccc; }
 
-        footer { text-align: center; padding: 60px 20px; font-size: 0.7rem; color: #444; letter-spacing: 5px; font-weight: 800; text-transform: uppercase; }
+        footer { text-align: center; padding: 40px 20px; font-size: 0.65rem; color: #444; letter-spacing: 4px; font-weight: 700; text-transform: uppercase; }
 
         @media (max-width: 600px) {
-            .huge-stat { font-size: 3.2rem; }
-            .hero-title { font-size: 2.6rem; }
+            .huge-stat { font-size: 3.5rem; }
+            .hero-title { font-size: 2.8rem; }
             .btn { width: 100%; }
         }
     </style>
@@ -128,14 +116,14 @@
     <div class="container">
         <div id="page-home" class="page active">
             <h1 class="hero-title">Absolute <span>Freedom.</span><br>Tamil Community.</h1>
-            <p class="hero-desc">The central hub for the bloods. Connect, bitch, and gossip together respectfully. No censorship, just Kadalai.</p>
+            <p style="color:var(--text-dim); margin-bottom:30px; font-size:1.1rem;">Verkadala Stop is a sanctuary for the bloods. Connect, bitch, and gossip together respectfully.</p>
 
             <div class="btn-flex">
                 <a href="https://discord.com/invite/7C6wX7cFDw" target="_blank" class="btn btn-main">JOIN NOW</a>
-                <a href="https://github.com/RUWAIDNIZAM/kadalabot" target="_blank" class="btn btn-ghost">GITHUB CODE</a>
+                <a href="https://github.com/RUWAIDNIZAM/kadalabot" target="_blank" class="btn btn-ghost">GITHUB REPO</a>
             </div>
 
-            <div class="stat-grid">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                 <div class="m3-card" style="margin-bottom:0; text-align: center;">
                     <span class="card-label" style="margin-bottom:5px;">Kadalais</span>
                     <h1 class="huge-stat" id="h-total">0</h1>
@@ -145,47 +133,34 @@
                     <h1 class="huge-stat" id="h-on" style="color:var(--accent);">0</h1>
                 </div>
             </div>
-
-            <div class="m3-card" style="background: rgba(56, 189, 248, 0.04); border-color: rgba(56, 189, 248, 0.2);">
-                <span class="card-label">Community Status</span>
-                <p style="font-weight: 500;">Hit 230+ members! We're keeping the vibes real while monitoring Discord ToS daily.</p>
-            </div>
         </div>
 
         <div id="page-rules" class="page">
             <h1 class="hero-title" style="font-size: 3rem;">The <span>Code.</span></h1>
             <div class="m3-card">
-                <span class="card-label">Server Rules</span>
                 <div class="rule-item"><b>Respect</b><p>No hate, harassment, or discrimination.</p></div>
-                <div class="rule-item"><b>NSFW/Gore</b><p>Strictly banned (CSAM = instant ban).</p></div>
-                <div class="rule-item"><b>DMs</b><p>Don’t DM without permission.</p></div>
-                <div class="rule-item"><b>Moderation</b><p>Discord ToS applies, mods decide actions.</p></div>
-                <div class="rule-item"><b>Evasion</b><p>No alts to bypass punishments.</p></div>
+                <div class="rule-item"><b>NSFW/Gore</b><p>Strictly banned.</p></div>
+                <div class="rule-item"><b>Moderation</b><p>Discord ToS applies at all times.</p></div>
             </div>
         </div>
 
         <div id="page-bot" class="page">
             <h1 class="hero-title" style="font-size: 3rem;">The <span>Bot.</span></h1>
             <div class="m3-card">
-                <span class="card-label">Utility & Commands</span>
-                <div class="rule-item"><b>kadala afk [reason]</b><p>Set ghost mode for silent bitching.</p></div>
-                <div class="rule-item"><b>setup color</b><p>Deploy the custom role selector.</p></div>
-                <div class="rule-item"><b>Gossip Sync</b><p>Mirror live logs to this dashboard.</p></div>
+                <div class="rule-item"><b>kadala afk</b><p>Enter ghost mode bitching silently.</p></div>
+                <div class="rule-item"><b>Gossip Sync</b><p>Real-time mirroring enabled.</p></div>
             </div>
         </div>
 
         <div id="page-stats" class="page">
             <div class="m3-card">
                 <span class="card-label">🟢 Online Circle Feature</span>
+                <p style="font-size: 0.8rem; opacity: 0.5; margin-bottom: 15px;">Flick members around. Grab and toss for gravity fun.</p>
                 <div id="circle-container"></div>
             </div>
             <div class="m3-card">
                 <span class="card-label">🏆 Top Bitchers</span>
                 <div id="yapper-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;"></div>
-            </div>
-            <div class="m3-card">
-                <span class="card-label">💬 Recent Gossip Feed</span>
-                <div id="at-glance-feed"></div>
             </div>
         </div>
 
@@ -193,7 +168,7 @@
             <div class="m3-card" style="text-align: center;">
                 <span class="card-label">Powered by Ruwaidcool Software</span>
                 <h1 class="hero-title" style="font-size: 3.5rem;">ruwaidcool.</h1>
-                <p style="margin-bottom: 30px; color: var(--text-dim);">Engineered for the Tamil community 2026.</p>
+                <p style="margin-bottom: 30px; color: var(--text-dim);">Engineered by **Ruwaid Nizam**. Open source pride.</p>
                 <a href="https://github.com/RUWAIDNIZAM/kadalabot" target="_blank" class="btn btn-ghost" style="width: auto; flex: none;">GITHUB REPO ↗</a>
             </div>
         </div>
@@ -202,16 +177,12 @@
     <footer>POWERED BY RUWAIDCOOL SOFTWARE | 2026</footer>
 
     <script>
-        // --- APPLE REPLAY STYLE ANIMATION ---
         function animateValue(obj, start, end, duration) {
             let startTimestamp = null;
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                // Fluid Ease Out Cubic
-                const easeValue = 1 - Math.pow(1 - progress, 3);
-                const current = Math.floor(easeValue * (end - start) + start);
-                obj.innerHTML = current;
+                obj.innerHTML = Math.floor((1 - Math.pow(1 - progress, 3)) * (end - start) + start);
                 if (progress < 1) window.requestAnimationFrame(step);
             };
             window.requestAnimationFrame(step);
@@ -219,23 +190,37 @@
 
         let lastT = 0, lastO = 0;
         let bubbles = [];
+        let physicsActive = false;
+        let draggedBubble = null;
+        let mouse = { x: 0, y: 0 };
         const container = document.getElementById('circle-container');
 
-        // Physics Logic
         function updatePhysics() {
+            if(!physicsActive) return;
             bubbles.forEach(b => {
+                if (b === draggedBubble) {
+                    b.vx = (mouse.x - b.r - b.x) * 0.2;
+                    b.vy = (mouse.y - b.r - b.y) * 0.2;
+                } else {
+                    b.vx *= 0.98; b.vy *= 0.98;
+                    b.vx += (Math.random() - 0.5) * 0.04;
+                }
                 b.x += b.vx; b.y += b.vy;
-                if (b.x <= 0 || b.x + b.r * 2 >= container.clientWidth) b.vx *= -1;
-                if (b.y <= 0 || b.y + b.r * 2 >= container.clientHeight) b.vy *= -1;
+                if (b.x <= 0) { b.x = 0; b.vx *= -0.8; }
+                if (b.x + b.r * 2 >= container.clientWidth) { b.x = container.clientWidth - b.r * 2; b.vx *= -0.8; }
+                if (b.y <= 0) { b.y = 0; b.vy *= -0.8; }
+                if (b.y + b.r * 2 >= container.clientHeight) { b.y = container.clientHeight - b.r * 2; b.vy *= -0.8; }
                 b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
             });
             requestAnimationFrame(updatePhysics);
         }
 
         function createBubbles(members) {
+            if(container.clientWidth === 0) return;
             container.innerHTML = ''; bubbles = [];
             members.forEach(m => {
-                const size = Math.floor(Math.random() * 20) + 65;
+                // --- RANDOM SIZES (50px to 120px) ---
+                const size = Math.floor(Math.random() * 70) + 50; 
                 const div = document.createElement('div');
                 div.className = 'bubble-pfp';
                 div.style.width = size + 'px'; div.style.height = size + 'px';
@@ -244,36 +229,42 @@
                 name.className = 'bubble-name'; name.innerText = m.username;
                 div.appendChild(name);
                 container.appendChild(div);
-                bubbles.push({ el: div, x: Math.random() * (container.clientWidth - size), y: Math.random() * (container.clientHeight - size), vx: (Math.random() - 0.5) * 1.2, vy: (Math.random() - 0.5) * 1.2, r: size / 2 });
+
+                const bObj = { el: div, x: Math.random() * (container.clientWidth - size), y: Math.random() * (container.clientHeight - size), vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2, r: size / 2 };
+                div.onpointerdown = (e) => { draggedBubble = bObj; div.setPointerCapture(e.pointerId); };
+                div.onpointerup = () => { draggedBubble = null; };
+                bubbles.push(bObj);
             });
         }
+
+        container.onpointermove = (e) => {
+            const rect = container.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left; mouse.y = e.clientY - rect.top;
+        };
 
         function showPage(id, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
             document.getElementById('page-' + id).classList.add('active');
             el.classList.add('active');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if(id === 'stats') {
+                physicsActive = true;
+                setTimeout(() => { if(cachedData) createBubbles(cachedData.onlineKadalais.members); }, 100);
+            } else { physicsActive = false; }
         }
 
+        let cachedData = null;
         function render(data) {
-            if(!data) return;
+            if(!data) return; cachedData = data;
             animateValue(document.getElementById('h-total'), lastT, data.totalKadalais || 0, 1500);
             animateValue(document.getElementById('h-on'), lastO, data.onlineKadalais?.count || 0, 1500);
             lastT = data.totalKadalais; lastO = data.onlineKadalais?.count;
-
-            if(data.onlineKadalais?.members) createBubbles(data.onlineKadalais.members);
 
             document.getElementById('yapper-list').innerHTML = (data.bitchers || []).map(u => `
                 <div class="rule-item" style="border:none; background:rgba(255,255,255,0.05); display:flex; align-items:center; gap:10px;">
                     <img src="${u.avatar}" style="width:40px; height:40px; border-radius:50%; border:1px solid var(--accent);">
                     <div style="flex:1;"><b>${u.username}</b></div>
                     <span style="font-weight:900; color:var(--accent); font-size:1.3rem;">${u.count}</span>
-                </div>`).join('');
-
-            document.getElementById('at-glance-feed').innerHTML = (data.chat || []).map(m => `
-                <div class="rule-item" style="border:none; background:rgba(255,255,255,0.03); border-radius:20px;">
-                    <b>${m.author}</b><p style="opacity:0.7">${m.content}</p>
                 </div>`).join('');
         }
 
@@ -282,9 +273,8 @@
                 const res = await fetch('/api/all');
                 const data = await res.json();
                 render(data);
-            } catch(e) { console.log("Updating..."); }
+            } catch(e) { console.log("Sync..."); }
         }
-
         fetchAll(); setInterval(fetchAll, 30000);
         updatePhysics();
     </script>
