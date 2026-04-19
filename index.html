@@ -22,11 +22,34 @@
         
         body { 
             background: var(--bg); color: var(--text-main); 
-            min-height: 100vh; overflow-x: hidden;
+            min-height: 100vh; overflow: hidden; /* Lock scroll during splash */
             line-height: var(--lh); letter-spacing: var(--ls);
         }
 
         .ambient-glow { position: fixed; inset: 0; z-index: -1; background: radial-gradient(circle at 50% -20%, rgba(56, 189, 248, 0.12), transparent 75%); }
+
+        /* --- SPLASH SCREEN (Nuclear Implementation) --- */
+        #splash-screen {
+            position: fixed; inset: 0; background: #000000; z-index: 10000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; color: #fff;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
+        }
+        #splash-counter { 
+            font-size: clamp(5rem, 20vw, 10rem); font-weight: 900; 
+            color: var(--accent); line-height: 1; letter-spacing: -6px; 
+            font-variant-numeric: tabular-nums;
+        }
+        .splash-text { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 5px; opacity: 0; transform: translateY(10px); transition: 0.5s ease 0.3s; }
+        .splash-done-msg .splash-text { opacity: 1; transform: translateY(0); }
+        
+        /* Hide splash */
+        #splash-screen.fade-out { opacity: 0; visibility: hidden; }
+
+        /* --- MAIN LAYOUT (Initially Hidden) --- */
+        nav, .container { opacity: 0; transform: translateY(10px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        body.splash-finished { overflow: auto; } /* Unlock scroll */
+        body.splash-finished nav, body.splash-finished .container { opacity: 1; transform: translateY(0); }
 
         /* --- NAVIGATION DOCK --- */
         nav { 
@@ -47,8 +70,8 @@
         .nav-link.active { color: var(--accent); }
         .nav-link.active::after { content: ''; width: 4px; height: 4px; background: var(--accent); border-radius: 50%; margin-top: 4px; }
 
-        /* --- MAIN CONTAINER --- */
-        .container { padding: 40px 5% 140px; max-width: 1400px; margin: 0 auto; }
+        /* --- CONTAINER --- */
+        .container { padding: 40px 6% 140px; max-width: 1400px; margin: 0 auto; }
         .page { display: none; opacity: 0; }
         .page.active { display: block; animation: pageIn 0.4s ease forwards; }
         @keyframes pageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -77,6 +100,9 @@
         .btn-main { background: var(--accent); color: #000; }
         .btn-ghost { background: transparent; color: #fff; border: 1px solid #333; }
 
+        .rule-item { padding: 15px; background: rgba(255,255,255,0.03); border-radius: 20px; margin-bottom: 10px; border-left: 3px solid var(--accent); }
+        .rule-item b { color: var(--accent); font-size: 0.85rem; display: block; margin-bottom: 4px; }
+
         footer { text-align: center; padding: 40px 20px; font-size: 0.65rem; color: #444; letter-spacing: 4px; font-weight: 700; text-transform: uppercase; }
 
         @media (max-width: 600px) {
@@ -87,6 +113,15 @@
     </style>
 </head>
 <body>
+    <div id="splash-screen">
+        <div class="glow" style="position: absolute; inset: 0; background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.1), transparent 70%);"></div>
+        <div style="position: relative; z-index: 10;">
+            <p style="text-transform: uppercase; letter-spacing: 8px; font-weight: 300; opacity: 0.5; margin-bottom: -15px;">BLOODS REACHED</p>
+            <h1 id="splash-counter">1</h1>
+            <p class="splash-text">ESTABLISHED FEB 2026<br>THANK YOU</p>
+        </div>
+    </div>
+
     <div class="ambient-glow"></div>
 
     <nav>
@@ -144,24 +179,31 @@
 
         <div id="page-rules" class="page"><div class="m3-card"><span class="card-label">Rules</span><p>Respect others and Discord ToS.</p></div></div>
         <div id="page-bot" class="page"><div class="m3-card"><span class="card-label">Bot</span><p>Utility like kadala afk.</p></div></div>
-        <div id="page-credits" class="page"><div class="m3-card" style="text-align: center;"><span class="card-label">Powered by</span><h1>ruwaidcool software</h1></div></div>
+        <div id="page-credits" class="page"><div class="m3-card" style="text-align: center;"><span class="card-label">Developer</span><h1>ruwaidcool.</h1></div></div>
     </div>
 
     <footer>POWERED BY RUWAIDCOOL SOFTWARE | 2026</footer>
 
     <script>
-        function animateValue(obj, start, end, duration) {
+        // Apple Replay Animated Numbers (Core Function)
+        function animateValue(obj, start, end, duration, callback) {
             let startTimestamp = null;
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                obj.innerHTML = Math.floor((1 - Math.pow(1 - progress, 3)) * (end - start) + start);
-                if (progress < 1) window.requestAnimationFrame(step);
+                // Fluid Ease Out Cubic
+                const current = Math.floor((1 - Math.pow(1 - progress, 3)) * (end - start) + start);
+                obj.innerHTML = current;
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else if (callback) {
+                    callback(); // Run callback when animation finishes
+                }
             };
             window.requestAnimationFrame(step);
         }
 
-        let lastT = 0;
+        let lastT = 0, firstRun = true;
 
         function showPage(id, el) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -171,13 +213,34 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // Logic to dismiss splash screen
+        function dismissSplash() {
+            const splash = document.getElementById('splash-screen');
+            splash.classList.add('splash-done-msg'); // Show text
+            
+            setTimeout(() => {
+                splash.classList.add('fade-out'); // Fade out whole overlay
+                document.body.classList.add('splash-finished'); // Show main content & unlock scroll
+            }, 2500); // Wait 2.5s after number stops
+        }
+
         function render(data) {
             if(!data) return;
-            // Apple Replay Animated Total Members
-            animateValue(document.getElementById('h-total'), lastT, data.totalKadalais || 0, 1500);
-            lastT = data.totalKadalais;
+            const totalMembers = data.totalKadalais || 0;
 
-            // Online Grid (No count, just actual members)
+            // Handle Splash Screen on First Run
+            if (firstRun) {
+                const splashCounter = document.getElementById('splash-counter');
+                // Count from 1 to current Discord total (Apple Replay Style)
+                animateValue(splashCounter, 1, totalMembers, 2000, dismissSplash);
+                firstRun = false;
+            }
+
+            // Static Page Update (Apple Replay Animated Total Members)
+            animateValue(document.getElementById('h-total'), lastT, totalMembers, 1500);
+            lastT = totalMembers;
+
+            // Online Grid
             document.getElementById('online-grid').innerHTML = (data.onlineKadalais?.members || []).map(m => `
                 <div class="member-item">
                     <img src="${m.avatar}" class="pfp-main">
@@ -186,19 +249,24 @@
 
             // Bitcher Rankings
             document.getElementById('yapper-list').innerHTML = (data.bitchers || []).map(u => `
-                <div class="member-item" style="display:flex; align-items:center; gap:15px; text-align:left; width:100%; margin-bottom:10px;">
+                <div class="member-item" style="display:flex; align-items:center; gap:15px; text-align:left; width:100%; margin-bottom:10px; border-radius:24px;">
                     <img src="${u.avatar}" class="pfp-main" style="margin:0;">
                     <div style="flex:1;"><b class="u-name">${u.username}</b></div>
-                    <span style="font-weight:900; color:var(--accent);">${u.count}</span>
+                    <span style="font-weight:900; color:var(--accent); font-size:1.3rem;">${u.count}</span>
                 </div>`).join('');
         }
 
         async function fetchAll() {
             try {
+                // Wait for the actual live data
                 const res = await fetch('/api/all');
                 const data = await res.json();
                 render(data);
-            } catch(e) { console.log("Updating..."); }
+            } catch(e) { 
+                console.log("Updating..."); 
+                // Fallback for testing without backend
+                // render({ totalKadalais: 315, onlineKadalais: { count: 0, members: [] }, bitchers: [] });
+            }
         }
 
         fetchAll(); setInterval(fetchAll, 30000);
