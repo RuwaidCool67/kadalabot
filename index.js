@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField, EmbedBuilder } = require('discord.js');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -6,6 +6,8 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const BOT_VERSION = "v24.f.2026"; 
+const ADMIN_CHANNEL_ID = "1477206978895020065";
+const STAFF_ROLES = ["Staff", "Admin", "Moderator"]; 
 
 // ================= STORAGE =================
 const loadJSON = (file, fallback) => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file)) : fallback;
@@ -76,7 +78,31 @@ client.on('ready', () => {
 
 client.on('interactionCreate', async i => {
     if (!i.isButton()) return;
+
+    // --- TIMEOUT APPROVAL HANDLER ---
+    if (i.customId.startsWith('timeout_')) {
+        if (!i.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+            return i.reply({ content: "Only Admins can approve this, mapla.", ephemeral: true });
+        }
+
+        const [action, targetId, hours] = i.customId.split('_').slice(1);
+        try {
+            const targetMember = await i.guild.members.fetch(targetId);
+
+            if (action === 'approve') {
+                const ms = parseInt(hours) * 3600000; // hr to ms
+                await targetMember.timeout(ms, `Timeout requested by staff, approved by ${i.user.username}`);
+                await i.update({ content: `✅ **Timeout Applied:** ${targetMember.user.username} for ${hours} hour(s).`, components: [] });
+            } else {
+                await i.update({ content: `❌ **Timeout Denied:** Request for ${targetMember.user.username} was rejected.`, components: [] });
+            }
+        } catch (e) {
+            await i.reply({ content: "Member server la illai or permission error, pangu.", ephemeral: true });
+        }
+        return;
+    }
     
+    // --- COLOR ROLE HANDLER ---
     const colors = { 
         'red_role': { name: 'Red', color: '#ff4d4d' }, 
         'blue_role': { name: 'Blue', color: '#33b5e5' }, 
@@ -106,6 +132,7 @@ client.on('messageCreate', async message => {
     
     const sanitize = (str, limit = 80) => str.replace(/<@!?&?\d+>|@everyone|@here/g, "").replace(/@/g, "").replace(/[\n\r]/g, " ").trim().substring(0, limit);
 
+    // --- LOG MESSAGES FOR WEB ---
     latestMessages.unshift({
         author: message.author.username,
         content: sanitize(message.content, 65),
@@ -119,6 +146,44 @@ client.on('messageCreate', async message => {
     userStats[message.author.id].avatar = message.author.displayAvatarURL();
     saveAll();
 
+    // --- TIMEOUT REQUEST (kadala timeout @person reason hr) ---
+    if (message.content.toLowerCase().startsWith('kadala timeout')) {
+        const isStaff = message.member.roles.cache.some(r => STAFF_ROLES.includes(r.name)) || message.member.permissions.has(PermissionsBitField.Flags.Administrator);
+        if (!isStaff) return message.reply("Only Staff can request timeouts! ✋");
+
+        const args = message.content.split(' ');
+        const target = message.mentions.members.first();
+        const hours = args[args.length - 1];
+        const reason = args.slice(3, -1).join(' ');
+
+        if (!target || isNaN(hours)) {
+            return message.reply("Syntax: `kadala timeout @person reason 2` (2 = hours)");
+        }
+
+        const adminChannel = client.channels.cache.get(ADMIN_CHANNEL_ID);
+        if (!adminChannel) return message.reply("Admin channel configuration error.");
+
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId(`timeout_approve_${target.id}_${hours}`).setLabel('Approve ✅').setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId(`timeout_deny_${target.id}_${hours}`).setLabel('Deny ❌').setStyle(ButtonStyle.Danger)
+        );
+
+        const embed = new EmbedBuilder()
+            .setTitle("⏳ Timeout Request")
+            .setColor("#38bdf8")
+            .addFields(
+                { name: "Staff", value: message.author.username, inline: true },
+                { name: "Target", value: target.user.username, inline: true },
+                { name: "Duration", value: `${hours} Hour(s)`, inline: true },
+                { name: "Reason", value: reason || "No reason provided" }
+            )
+            .setTimestamp();
+
+        adminChannel.send({ embeds: [embed], components: [row] });
+        return message.reply(`Request for **${hours}hr** timeout sent for approval. 📨`);
+    }
+
+    // --- AFK SYSTEM ---
     if (message.mentions.users.size > 0) {
         const firstAFK = message.mentions.users.find(u => afkUsers[u.id]);
         if (firstAFK) {
@@ -139,6 +204,7 @@ client.on('messageCreate', async message => {
         message.reply("Welcome back!");
     }
 
+    // --- COLOR PANEL ---
     if (message.content.toLowerCase() === 'kadala setup color' && message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
         const row1 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('red_role').setLabel('Red 🔥').setStyle(ButtonStyle.Danger),
