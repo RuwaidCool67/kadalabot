@@ -62,7 +62,7 @@ const updateMasterCache = async () => {
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get("/api/all", (req, res) => res.json(cachedResponse || { error: "Brewing..." }));
 
-app.listen(PORT, () => console.log(`Dashboard Live`));
+app.listen(PORT, () => console.log(`Dashboard Live on port ${PORT}`));
 
 // ================= DISCORD BOT =================
 const client = new Client({ 
@@ -90,31 +90,26 @@ client.on('interactionCreate', async i => {
             const targetMember = await i.guild.members.fetch(targetId);
 
             if (action === 'approve') {
-                const ms = parseInt(hours) * 3600000; // hr to ms
-                await targetMember.timeout(ms, `Timeout requested by staff, approved by ${i.user.username}`);
+                const ms = parseInt(hours) * 3600000;
+                await targetMember.timeout(ms, `Approved by ${i.user.username}`);
                 await i.update({ content: `✅ **Timeout Applied:** ${targetMember.user.username} for ${hours} hour(s).`, components: [] });
             } else {
                 await i.update({ content: `❌ **Timeout Denied:** Request for ${targetMember.user.username} was rejected.`, components: [] });
             }
         } catch (e) {
-            await i.reply({ content: "Member server la illai or permission error, pangu.", ephemeral: true });
+            await i.reply({ content: "Member error, pangu.", ephemeral: true });
         }
         return;
     }
     
     // --- COLOR ROLE HANDLER ---
     const colors = { 
-        'red_role': { name: 'Red', color: '#ff4d4d' }, 
-        'blue_role': { name: 'Blue', color: '#33b5e5' }, 
-        'green_role': { name: 'Green', color: '#2ecc71' },
-        'yellow_role': { name: 'Yellow', color: '#f1c40f' },
-        'purple_role': { name: 'Purple', color: '#9b59b6' },
-        'pink_role': { name: 'Pink', color: '#e91e63' }
+        'red_role': { name: 'Red', color: '#ff4d4d' }, 'blue_role': { name: 'Blue', color: '#33b5e5' }, 
+        'green_role': { name: 'Green', color: '#2ecc71' }, 'yellow_role': { name: 'Yellow', color: '#f1c40f' },
+        'purple_role': { name: 'Purple', color: '#9b59b6' }, 'pink_role': { name: 'Pink', color: '#e91e63' }
     };
-
     const choice = colors[i.customId];
     if (!choice) return;
-
     await i.deferReply({ ephemeral: true });
     try {
         const role = i.guild.roles.cache.find(r => r.name === choice.name) || await i.guild.roles.create({ name: choice.name, color: choice.color });
@@ -122,23 +117,15 @@ client.on('interactionCreate', async i => {
         await i.member.roles.remove(i.member.roles.cache.filter(r => names.includes(r.name)));
         await i.member.roles.add(role);
         await i.editReply(`Role added: **${choice.name}** ✨`);
-    } catch (e) { 
-        await i.editReply("Permissions error."); 
-    }
+    } catch (e) { await i.editReply("Permissions error."); }
 });
 
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
-    
     const sanitize = (str, limit = 80) => str.replace(/<@!?&?\d+>|@everyone|@here/g, "").replace(/@/g, "").replace(/[\n\r]/g, " ").trim().substring(0, limit);
 
-    // --- LOG MESSAGES FOR WEB ---
-    latestMessages.unshift({
-        author: message.author.username,
-        content: sanitize(message.content, 65),
-        avatar: message.author.displayAvatarURL(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    });
+    // --- LOG MESSAGES ---
+    latestMessages.unshift({ author: message.author.username, content: sanitize(message.content, 65), avatar: message.author.displayAvatarURL(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
     if (latestMessages.length > 12) latestMessages.pop();
 
     if (!userStats[message.author.id]) userStats[message.author.id] = { username: message.author.username, count: 0, avatar: message.author.displayAvatarURL() };
@@ -146,7 +133,7 @@ client.on('messageCreate', async message => {
     userStats[message.author.id].avatar = message.author.displayAvatarURL();
     saveAll();
 
-    // --- TIMEOUT REQUEST (kadala timeout @person reason hr) ---
+    // --- TIMEOUT REQUEST ---
     if (message.content.toLowerCase().startsWith('kadala timeout')) {
         const isStaff = message.member.roles.cache.some(r => STAFF_ROLES.includes(r.name)) || message.member.permissions.has(PermissionsBitField.Flags.Administrator);
         if (!isStaff) return message.reply("Only Staff can request timeouts! ✋");
@@ -156,31 +143,34 @@ client.on('messageCreate', async message => {
         const hours = args[args.length - 1];
         const reason = args.slice(3, -1).join(' ');
 
-        if (!target || isNaN(hours)) {
-            return message.reply("Syntax: `kadala timeout @person reason 2` (2 = hours)");
-        }
+        if (!target || isNaN(hours)) return message.reply("Syntax: `kadala timeout @person reason 2` (2 = hours)");
 
         const adminChannel = client.channels.cache.get(ADMIN_CHANNEL_ID);
-        if (!adminChannel) return message.reply("Admin channel configuration error.");
-
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId(`timeout_approve_${target.id}_${hours}`).setLabel('Approve ✅').setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId(`timeout_deny_${target.id}_${hours}`).setLabel('Deny ❌').setStyle(ButtonStyle.Danger)
         );
 
-        const embed = new EmbedBuilder()
-            .setTitle("⏳ Timeout Request")
-            .setColor("#38bdf8")
-            .addFields(
-                { name: "Staff", value: message.author.username, inline: true },
-                { name: "Target", value: target.user.username, inline: true },
-                { name: "Duration", value: `${hours} Hour(s)`, inline: true },
-                { name: "Reason", value: reason || "No reason provided" }
-            )
+        const embed = new EmbedBuilder().setTitle("⏳ Timeout Request").setColor("#38bdf8")
+            .addFields({ name: "Staff", value: message.author.username, inline: true }, { name: "Target", value: target.user.username, inline: true }, { name: "Duration", value: `${hours} Hour(s)`, inline: true }, { name: "Reason", value: reason || "No reason provided" })
             .setTimestamp();
 
         adminChannel.send({ embeds: [embed], components: [row] });
         return message.reply(`Request for **${hours}hr** timeout sent for approval. 📨`);
+    }
+
+    // --- UNTIMEOUT (kadala untimeout @person) ---
+    if (message.content.toLowerCase().startsWith('kadala untimeout')) {
+        const isStaff = message.member.roles.cache.some(r => STAFF_ROLES.includes(r.name)) || message.member.permissions.has(PermissionsBitField.Flags.Administrator);
+        if (!isStaff) return message.reply("Only Staff can remove timeouts! ✋");
+
+        const target = message.mentions.members.first();
+        if (!target) return message.reply("Mention correctly, pangu!");
+
+        try {
+            await target.timeout(null, `Removed by ${message.author.username}`);
+            return message.reply(`✅ **Timeout Removed:** ${target.user.username} is free!`);
+        } catch (e) { return message.reply("Permissions error, pangu."); }
     }
 
     // --- AFK SYSTEM ---
@@ -213,9 +203,7 @@ client.on('messageCreate', async message => {
             new ButtonBuilder().setCustomId('yellow_role').setLabel('Yellow ⚡').setStyle(ButtonStyle.Secondary),
             new ButtonBuilder().setCustomId('purple_role').setLabel('Purple 😈').setStyle(ButtonStyle.Secondary)
         );
-        const row2 = new ActionRowBuilder().addComponents(
-            new ButtonBuilder().setCustomId('pink_role').setLabel('Pink 🌸').setStyle(ButtonStyle.Secondary)
-        );
+        const row2 = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('pink_role').setLabel('Pink 🌸').setStyle(ButtonStyle.Secondary));
         message.channel.send({ content: "🎨 **KADALA COLOR PANEL**", components: [row1, row2] });
     }
 });
