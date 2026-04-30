@@ -1,12 +1,10 @@
-const { Client, GatewayIntentBits, ActivityType, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionsBitField } = require('discord.js');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SITE_URL = "https://kadalabot.up.railway.app/"; 
-const PROMO_CHANNEL_ID = "1477208051584073799"; 
 const BOT_VERSION = "v24.f.2026"; 
 
 // ================= STORAGE =================
@@ -28,7 +26,7 @@ const formatTime = (ms) => {
     return `${mins}m ${totalSeconds % 60}s`;
 };
 
-// ================= MASTER CACHE =================
+// ================= DATA SYNC =================
 let cachedResponse = null;
 const updateMasterCache = async () => {
     try {
@@ -56,13 +54,13 @@ const updateMasterCache = async () => {
             chat: latestMessages,
             system: { ping: client.ws.ping + "ms", uptime: Math.floor(process.uptime() / 60) + "m" }
         };
-    } catch (e) { console.log("Full sync failed mapla."); }
+    } catch (e) { console.log("Sync failed."); }
 };
 
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get("/api/all", (req, res) => res.json(cachedResponse || { error: "Brewing..." }));
 
-app.listen(PORT, () => console.log(`Full Online Sync Live`));
+app.listen(PORT, () => console.log(`Dashboard Live`));
 
 // ================= DISCORD BOT =================
 const client = new Client({ 
@@ -76,7 +74,6 @@ client.on('ready', () => {
     setInterval(updateMasterCache, 30000);
 });
 
-// Color Role Setup - ADDED MISSING COLORS
 client.on('interactionCreate', async i => {
     if (!i.isButton()) return;
     
@@ -94,18 +91,13 @@ client.on('interactionCreate', async i => {
 
     await i.deferReply({ ephemeral: true });
     try {
-        // Find or create the role
         const role = i.guild.roles.cache.find(r => r.name === choice.name) || await i.guild.roles.create({ name: choice.name, color: choice.color });
-        
-        // Only remove existing color roles from this bot (using the 'names' list)
         const names = Object.values(colors).map(c => c.name);
         await i.member.roles.remove(i.member.roles.cache.filter(r => names.includes(r.name)));
-        
         await i.member.roles.add(role);
         await i.editReply(`Role added: **${choice.name}** ✨`);
     } catch (e) { 
-        console.error(e);
-        await i.editReply("Permissions error. Make sure my role is higher than the color roles!"); 
+        await i.editReply("Permissions error."); 
     }
 });
 
@@ -127,7 +119,6 @@ client.on('messageCreate', async message => {
     userStats[message.author.id].avatar = message.author.displayAvatarURL();
     saveAll();
 
-    // AFK System
     if (message.mentions.users.size > 0) {
         const firstAFK = message.mentions.users.find(u => afkUsers[u.id]);
         if (firstAFK) {
@@ -148,7 +139,6 @@ client.on('messageCreate', async message => {
         message.reply("Welcome back!");
     }
 
-    // UPDATED COLOR PANEL COMMAND
     if (message.content.toLowerCase() === 'kadala setup color' && message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
         const row1 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('red_role').setLabel('Red 🔥').setStyle(ButtonStyle.Danger),
@@ -157,11 +147,9 @@ client.on('messageCreate', async message => {
             new ButtonBuilder().setCustomId('yellow_role').setLabel('Yellow ⚡').setStyle(ButtonStyle.Secondary),
             new ButtonBuilder().setCustomId('purple_role').setLabel('Purple 😈').setStyle(ButtonStyle.Secondary)
         );
-
         const row2 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('pink_role').setLabel('Pink 🌸').setStyle(ButtonStyle.Secondary)
         );
-
         message.channel.send({ content: "🎨 **KADALA COLOR PANEL**", components: [row1, row2] });
     }
 });
